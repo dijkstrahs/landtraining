@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="nl"><head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#EDF0EE">
 <title>Landtraining</title>
 <meta property="og:title" content="Landtraining">
@@ -37,17 +37,19 @@
   --muscle:#FF5B3E; --mat:#2A3133; --line:#2C3335; --post:#323A3C; --band:#4DBDAC; --bandfar:#2F6E66;
   --card:#1E2425; --accent:#4DBDAC; --accent-ink:#0E1314; color-scheme:dark}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--text);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+/* geen zoom bij snel tikken (dubbeltik) op knoppen en velden */
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--text);font-size:16px;line-height:1.45}
 body{padding:env(safe-area-inset-top) max(0px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(0px,env(safe-area-inset-left))}
 [hidden]{display:none!important}
-button,input,select,textarea{font:inherit;color:inherit}
-button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 14px;min-height:42px;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit;touch-action:manipulation}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 14px;min-height:42px;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--muscle);outline-offset:2px}
 button[aria-pressed="true"]{background:var(--ink);color:var(--stage);border-color:var(--ink)}
 button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
 button.ghost{background:transparent;border-color:transparent}
 button:disabled{opacity:.4;cursor:default}
-input,select,textarea{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-height:42px;width:100%}
+input,select,textarea{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-height:42px;width:100%;font-size:16px}
 h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:.01em;margin:0;line-height:1.05}
 h1{font-size:30px;text-transform:uppercase}
 h2{font-size:24px;text-transform:uppercase}
@@ -66,12 +68,18 @@ a{color:var(--accent)}
 /* kaarten en lijsten */
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
 .list{display:grid;gap:10px}
-.item{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center}
-.item .nr{font-family:var(--display);font-weight:700;font-size:22px;color:var(--muted);text-align:center}
+.item{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center}
+.item .nr{font-family:var(--display);font-weight:700;font-size:22px;color:var(--muted);text-align:center;min-height:44px;min-width:40px;padding:0;
+  border:1px dashed var(--line);background:var(--bg);touch-action:none;cursor:grab}
 .item .t{font-weight:600}
 .item .d{font-size:14px;color:var(--muted)}
 .item .acts{display:flex;gap:4px}
 .item .acts button{min-height:38px;min-width:38px;padding:4px 8px}
+.list.sorting .item{transition:none}
+.item.dragging{border-color:var(--accent);box-shadow:0 8px 24px rgba(0,0,0,.18);position:relative;z-index:3}
+.item.dragging .nr{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);cursor:grabbing}
+.posgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px}
+.posgrid button{font-family:var(--display);font-weight:700;font-size:20px;min-height:50px;padding:0}
 .empty{text-align:center;padding:28px 12px;color:var(--muted);border:1.5px dashed var(--line);border-radius:14px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .row.end{justify-content:flex-end}
@@ -79,6 +87,8 @@ a{color:var(--accent)}
 .stack{display:grid;gap:14px}
 label.f{display:grid;gap:4px;font-size:14px;color:var(--muted);min-width:0}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.actions{display:grid;gap:10px}
+.actions button{width:100%;min-height:50px}
 input{min-width:0}
 input[type=date]{-webkit-appearance:none;appearance:none;display:block;text-align:left;line-height:22px}
 input[type=date]::-webkit-date-and-time-value{text-align:left}
@@ -136,10 +146,14 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--stage);padding:10px 16px;border-radius:999px;z-index:40;font-size:15px;max-width:90vw;text-align:center}
 
 /* speler */
-.player{min-height:100vh;min-height:100dvh;display:grid;grid-template-rows:auto 1fr}
+.player{min-height:100vh;min-height:100dvh;display:grid;grid-template-rows:auto auto 1fr}
 .player .ptop{display:flex;align-items:center;gap:8px;padding:10px max(12px,calc((100% - 600px)/2 + 16px));border-bottom:1px solid var(--line)}
 .player .ptop .grow{min-width:0}
 .player .ptop .title{font-family:var(--display);font-weight:700;font-size:15px;color:var(--muted);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.volbar{display:flex;align-items:center;gap:10px;padding:8px max(12px,calc((100% - 600px)/2 + 16px));border-bottom:1px solid var(--line);background:var(--card)}
+.volbar input[type=range]{flex:1;min-height:36px;padding:0;border:0;background:transparent;accent-color:var(--accent)}
+.volbar .pct{font-family:var(--display);font-weight:700;font-size:17px;min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+.volbar button{min-height:38px;padding:4px 10px}
 .dots{display:flex;gap:4px;margin-top:4px}
 .dots i{height:4px;flex:1;border-radius:2px;background:var(--line)}
 .dots i.on{background:var(--accent)}
@@ -147,11 +161,13 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .player main{overflow:auto;padding:14px 16px calc(20px + env(safe-area-inset-bottom));display:grid;gap:12px;align-content:start;max-width:600px;width:100%;margin:0 auto}
 .player .exname{font-size:30px;text-transform:uppercase}
 .presc{font-size:17px;font-weight:600}
-.timer{display:grid;justify-items:center;gap:6px;padding:16px 12px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+.timer{display:grid;justify-items:center;gap:6px;padding:16px 12px;background:var(--card);border:1px solid var(--line);border-radius:14px;min-width:0}
 .timer .phase{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .timer .phase.go{color:var(--muscle)}
 .timer .phase.rest{color:var(--accent)}
-.timer .big{font-family:var(--display);font-weight:700;font-size:72px;line-height:1;font-variant-numeric:tabular-nums}
+/* grote tijd of teller: altijd op één regel, schaalt mee met de schermbreedte */
+.timer .big{font-family:var(--display);font-weight:700;font-size:clamp(52px,19vw,76px);line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;max-width:100%;overflow:hidden}
+.timer .big .u{font-size:.5em;margin-left:.08em;color:var(--muted);font-weight:700}
 .timer .sets{font-size:15px;color:var(--muted)}
 .timer .row{justify-content:center}
 .timer .row button{min-width:120px}
@@ -164,11 +180,24 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .cover ol{margin:0;padding-left:22px;display:grid;gap:6px}
 .timer .presc{font-size:16px;text-align:center;color:var(--ink);padding-bottom:6px;margin-bottom:2px;border-bottom:1px solid var(--line);width:100%}
 
+/* afsluiting */
+.done-screen{text-align:center;justify-items:center;padding-top:8px}
+.done-screen .trophy{font-size:72px;line-height:1;animation:pop .7s cubic-bezier(.2,1.6,.4,1) both}
+.done-screen h1{font-size:40px}
+.done-screen .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;width:100%}
+.done-screen .stats div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 6px;display:grid}
+.done-screen .stats b{font-family:var(--display);font-size:36px;line-height:1}
+.done-screen .stats span{font-size:14px;color:var(--muted)}
+.done-screen .pnav,.done-screen>button{width:100%}
+.confetti{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:50}
+@keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.done-screen .trophy{animation:none}}
+
 </style>
 </head><body>
 <div id="app"></div>
 <script type="application/json" id="catalog">
-{"lists": {"groepen": ["Planken en steunen", "Rug en achterste keten", "Romp en schouders op de rug", "Staand met elastiek", "Squats, lunges en sprongen", "Mobiliteit", "Rek en strek", "Warming-up en ademhaling"], "types": ["Kracht", "Snelkracht", "Mobiliteit", "Rek en strek", "Warming-up", "Ademhaling"], "hoofdgroepen": ["Schouders", "Rug", "Romp", "Benen", "Heupen", "Hele lichaam"], "spiergroepen": ["Schouders", "Borst", "Armen", "Bovenrug", "Onderrug", "Buik/romp", "Billen", "Heupen", "Bovenbenen voor", "Bovenbenen achter", "Kuiten en enkels", "Ademhaling"]}, "exercises": [{"id": "plank", "src": "https://claude.ai/artifact/V6nvN1fGB24XEJRSqR9ZAg", "naam": "Plank", "groep": "Planken en steunen", "type": "Kracht", "hoofdgroep": "Romp", "spiergroepen": ["Buik/romp", "Schouders", "Billen"], "houding": "Onderarmen of gestrekte armen · geen materiaal", "iso": "Plank vasthouden", "dyn": "Shoulder taps / knie naar borst", "w": 1200, "h": 544, "sub": "Buikspieren, schouders en bilspieren", "legend": "<span><i class=\"dot\"></i>Buikspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Schouders en bilspieren (secundair)</span>"}, {"id": "sideplank", "src": "https://claude.ai/artifact/AEajH2bFwbXDx78VZ74hKh", "naam": "Side plank", "groep": "Planken en steunen", "type": "Kracht", "hoofdgroep": "Romp", "spiergroepen": ["Buik/romp", "Heupen", "Schouders"], "houding": "Op de zij, onderarm · geen materiaal", "iso": "Heup omhoog vasthouden", "dyn": "Heup zakken en heffen", "w": 1200, "h": 788, "sub": "Op de zij, onderarm · schuine buikspieren, zijkant bilspieren en schouder", "legend": "<span><i class=\"dot\"></i>Schuine buikspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Zijkant bilspieren en schouder (secundair)</span>"}, {"id": "bearplank", "src": "https://claude.ai/artifact/BUxsdp3WQUEkBjMomweyAi", "naam": "Bear crawl", "groep": "Planken en steunen", "type": "Kracht", "hoofdgroep": "Romp", "spiergroepen": ["Buik/romp", "Schouders", "Bovenbenen voor"], "houding": "Handen plat, op de tenen met de hielen omhoog, knieën net boven de grond · geen materiaal", "iso": "Knieën 3 cm boven de grond", "dyn": "Kruipen vooruit en achteruit, of shoulder taps", "w": 1200, "h": 788, "sub": "Buikspieren, quadriceps en schouders", "legend": "<span><i class=\"dot\"></i>Buikspieren en quadriceps (primair)</span>\n    <span><i class=\"dot soft\"></i>Schouders, schuine buikspieren en bilspieren (secundair)</span>"}, {"id": "pushup", "src": "https://claude.ai/artifact/964GfmSxK9FK182Xuf1ayj", "naam": "Push-up", "groep": "Planken en steunen", "type": "Kracht", "hoofdgroep": "Schouders", "spiergroepen": ["Borst", "Schouders", "Armen", "Buik/romp"], "houding": "Plank of op de knieën · geen materiaal", "iso": "Hoog (halverwege) of laag (onderin) vasthouden", "dyn": "Push-up", "w": 1200, "h": 619, "sub": "Borst, triceps en voorkant schouders", "legend": "<span><i class=\"dot\"></i>Borstspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Triceps en voorkant schouders (secundair)</span>\n    <span data-when=\"v:plus\"><i class=\"dot\"></i>Serratus anterior (plus: schouderbladen uitduwen)</span>"}, {"id": "prone", "src": "https://claude.ai/artifact/Y4uDgwaLFvEfkNzPWVYdmZ", "naam": "Prone raises", "groep": "Rug en achterste keten", "type": "Kracht", "hoofdgroep": "Rug", "spiergroepen": ["Bovenrug", "Onderrug", "Schouders", "Billen"], "houding": "Op de buik · geen materiaal", "iso": "Armen, borst en benen omhoog vasthouden", "dyn": "Heffen en zakken", "w": 1200, "h": 825, "sub": "Bovenrug, schouders en onderrug", "legend": "<span><i class=\"dot\"></i>Trapezius en rhomboïden (primair)</span>\n    <span><i class=\"dot soft\"></i>Rugstrekkers en bilspieren (secundair)</span>"}, {"id": "birddog", "src": "https://claude.ai/artifact/M4WZvJ1Pq6bT6pkUBCuq3Y", "naam": "Bird dog", "groep": "Rug en achterste keten", "type": "Kracht", "hoofdgroep": "Romp", "spiergroepen": ["Buik/romp", "Onderrug", "Billen", "Schouders"], "houding": "Handen en knieën · geen materiaal", "iso": "Arm en tegenovergesteld been gestrekt", "dyn": "Afwisselend strekken", "w": 1200, "h": 788, "sub": "Rompstabiliteit · onderrug, billen en diepe buikspieren", "legend": "<span><i class=\"dot\"></i>Bilspieren en rugstrekkers (primair)</span>\n    <span><i class=\"dot soft\"></i>Diepe buikspieren (secundair)</span>"}, {"id": "glutebridge", "src": "https://claude.ai/artifact/DWHcYRCfG4sSaJTzUZVBxv", "naam": "Glute bridge", "groep": "Rug en achterste keten", "type": "Kracht", "hoofdgroep": "Benen", "spiergroepen": ["Billen", "Bovenbenen achter", "Onderrug"], "houding": "Op de rug · geen materiaal of elastiek boven de knieën", "iso": "Heupen boven vasthouden", "dyn": "Heffen en zakken", "w": 1200, "h": 660, "sub": "Bilspieren en hamstrings", "legend": "<span><i class=\"dot\"></i>Gluteus maximus (primair)</span>\n    <span><i class=\"dot soft\"></i>Hamstrings (secundair)</span>\n    <span data-when=\"v:band\"><i class=\"dot soft\"></i>Gluteus medius (knieën naar buiten)</span>"}, {"id": "rdl", "src": "https://claude.ai/artifact/CGCd6fPF4j1P1NY3XNZoiC", "naam": "Single-leg RDL", "groep": "Rug en achterste keten", "type": "Kracht", "hoofdgroep": "Benen", "spiergroepen": ["Bovenbenen achter", "Billen", "Onderrug"], "houding": "Staand op één been · geen materiaal of elastiek onder de voet", "iso": "Romp horizontaal, been naar achteren; bij wiebelen vingertoppen tegen de muur", "dyn": "Voorover kantelen en terug", "w": 1200, "h": 900, "sub": "Hamstrings, bilspieren en rugstrekkers", "legend": "<span><i class=\"dot \"></i>Hamstrings en bilspieren standbeen (primair)</span>\n    <span><i class=\"dot soft\"></i>Rugstrekkers (secundair)</span>"}, {"id": "hollow", "src": "https://claude.ai/artifact/47xZPNERT7yt2koR7wAm39", "naam": "Hollow body", "groep": "Romp en schouders op de rug", "type": "Kracht", "hoofdgroep": "Romp", "spiergroepen": ["Buik/romp", "Heupen"], "houding": "Op de rug · geen materiaal", "iso": "Hollow hold met armen in stroomlijn", "dyn": "Hollow rocks", "w": 1200, "h": 563, "sub": "Op de rug · rechte en diepe buikspieren, heupbuigers", "legend": "<span><i class=\"dot\"></i>Rechte en diepe buikspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Heupbuigers en quadriceps (secundair)</span>"}, {"id": "deadbug", "src": "https://claude.ai/artifact/16VhbsHUWGgwynnhsVLLtk", "naam": "Dead bug", "groep": "Romp en schouders op de rug", "type": "Kracht", "hoofdgroep": "Romp", "spiergroepen": ["Buik/romp", "Heupen"], "houding": "Op de rug, armen en knieën omhoog · geen materiaal of elastiek", "iso": "Arm en tegenovergesteld been gestrekt", "dyn": "Afwisselend strekken", "w": 1200, "h": 788, "sub": "Op de rug · diepe buikspieren, rechte buikspier en heupbuigers", "legend": "<span><i class=\"dot\"></i>Diepe en rechte buikspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Heupbuigers en schouders (secundair)</span>"}, {"id": "floorangels", "src": "https://claude.ai/artifact/TeBxVFgDNPDRzmjkMqNMhc", "naam": "Floor angels", "groep": "Romp en schouders op de rug", "type": "Mobiliteit", "hoofdgroep": "Schouders", "spiergroepen": ["Schouders", "Bovenrug"], "houding": "Op de rug · geen materiaal", "iso": "Armen in Y tegen de grond", "dyn": "Armen van W naar Y en terug", "w": 1200, "h": 844, "sub": "Op de rug, op de buik of tegen de muur · middelste en onderste trapezius, schouders", "legend": "<span><i class=\"dot\"></i>Middelste en onderste trapezius (primair)</span>\n    <span><i class=\"dot soft\"></i>Schouders en borst, rek (secundair)</span>"}, {"id": "row", "src": "https://claude.ai/artifact/SdzNgTyisvywvkXvRU5Unw", "naam": "Standing row", "groep": "Staand met elastiek", "type": "Kracht", "hoofdgroep": "Rug", "spiergroepen": ["Bovenrug", "Schouders", "Armen"], "houding": "Staand · elastiek op buikhoogte", "iso": "Ellebogen achter, schouderbladen samen", "dyn": "Roeien", "w": 1200, "h": 938, "sub": "Met elastiek · bovenrug en achterkant schouders", "legend": "<span data-when=\"twee,een\"><i class=\"dot\"></i>Rhomboïden en middelste trapezius (primair)</span>\n    <span data-when=\"twee,een\"><i class=\"dot soft\"></i>Latissimus en achterste schouder (secundair)</span>\n    <span data-when=\"face\" hidden><i class=\"dot\"></i>Achterste schouder en rotator cuff (primair)</span>\n    <span data-when=\"face\" hidden><i class=\"dot soft\"></i>Rhomboïden en middelste trapezius (secundair)</span>"}, {"id": "pullapart", "src": "https://claude.ai/artifact/MEMstX2RvwQfEbtGHKFVfd", "naam": "Band pull-apart", "groep": "Staand met elastiek", "type": "Kracht", "hoofdgroep": "Schouders", "spiergroepen": ["Bovenrug", "Schouders"], "houding": "Staand · elastiek in de handen", "iso": "Uit elkaar getrokken vasthouden", "dyn": "Uit elkaar trekken en terug", "w": 1200, "h": 975, "sub": "Met elastiek · bovenrug en achterkant schouders", "legend": "<span><i class=\"dot\"></i>Rhomboïden en middelste trapezius (primair)</span>\n    <span><i class=\"dot soft\"></i>Achterste schouder (secundair)</span>"}, {"id": "exorotatie", "src": "https://claude.ai/artifact/UxyAerojXotU4XFftmt7bt", "naam": "Exorotatie", "groep": "Staand met elastiek", "type": "Kracht", "hoofdgroep": "Schouders", "spiergroepen": ["Schouders"], "houding": "Staand · elastiek opzij op ellebooghoogte", "iso": "Onderarm naar buiten gedraaid", "dyn": "Naar buiten draaien en terug", "w": 1200, "h": 938, "sub": "Met elastiek · rotator cuff en achterkant schouder", "legend": "<span><i class=\"dot\"></i>Infraspinatus en teres minor, rotator cuff (primair)</span>\n    <span><i class=\"dot soft\"></i>Achterste schouder (secundair)</span>"}, {"id": "pulldown", "src": "https://claude.ai/artifact/VtEB94sgW2XkjLYhd2NCYM", "naam": "Straight-arm pulldown (zwemtrek)", "groep": "Staand met elastiek", "type": "Kracht", "hoofdgroep": "Rug", "spiergroepen": ["Bovenrug", "Schouders", "Buik/romp"], "houding": "Licht voorover · elastiek hoog vast", "iso": "Armen bij de heupen vasthouden", "dyn": "Gestrekte armen van boven naar de heupen", "w": 1200, "h": 938, "sub": "Met elastiek · zwemtrek met gestrekte armen", "legend": "<span><i class=\"dot\"></i>Latissimus dorsi (primair)</span>\n    <span><i class=\"dot soft\"></i>Triceps en achterste schouder (secundair)</span>"}, {"id": "pallof", "src": "https://claude.ai/artifact/Ru9nwVyo9o5RpfyHN3bd5c", "naam": "Pallof press", "groep": "Staand met elastiek", "type": "Kracht", "hoofdgroep": "Romp", "spiergroepen": ["Buik/romp", "Schouders"], "houding": "Staand of knielend · elastiek opzij op borsthoogte", "iso": "Armen gestrekt voor de borst", "dyn": "Uitdrukken en terug", "w": 1200, "h": 900, "sub": "Met elastiek · anti-rotatie voor de romp", "legend": "<span><i class=\"dot\"></i>Schuine en diepe buikspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Bilspieren en schouders (secundair)</span>"}, {"id": "bandwalk", "src": "https://claude.ai/artifact/Cf2JkjGsA6ZYfPUT4pCnPD", "naam": "Lateral band walk", "groep": "Staand met elastiek", "type": "Kracht", "hoofdgroep": "Heupen", "spiergroepen": ["Billen", "Heupen", "Bovenbenen voor"], "houding": "Licht gebogen knieën · elastiek boven de knieën of enkels", "iso": "Mini-squat, knieën naar buiten", "dyn": "Zijwaarts stappen", "w": 1200, "h": 825, "sub": "Met elastiek · zijkant heup en billen", "legend": "<span><i class=\"dot\"></i>Gluteus medius, zijkant heup (primair)</span>\n    <span><i class=\"dot soft\"></i>Bilspieren en bovenbenen (secundair)</span>"}, {"id": "squat", "src": "https://claude.ai/artifact/7rgHRJeGo6dJJwCGJoBeCh", "naam": "Squat", "groep": "Squats, lunges en sprongen", "type": "Kracht", "hoofdgroep": "Benen", "spiergroepen": ["Bovenbenen voor", "Billen"], "houding": "Staand · geen materiaal of elastiek boven de knieën", "iso": "Wall sit: rug tegen de muur, dijen horizontaal", "dyn": "Squat", "w": 1200, "h": 900, "sub": "Bovenbenen en bilspieren", "legend": "<span><i class=\"dot \"></i>Quadriceps (primair)</span>\n    <span><i class=\"dot soft\"></i>Bilspieren (secundair)</span>"}, {"id": "horse", "src": "https://claude.ai/artifact/CP5CAEtauZhNB6s6xa6gXb", "naam": "Horse stance squat", "groep": "Squats, lunges en sprongen", "type": "Kracht", "hoofdgroep": "Benen", "spiergroepen": ["Bovenbenen voor", "Billen", "Heupen"], "houding": "Staand, breed · geen materiaal", "iso": "Diep vasthouden, dijen bijna horizontaal", "dyn": "Volledige squat in brede stand", "w": 1200, "h": 788, "sub": "Breed staand · bovenbenen, bilspieren en binnenkant dijen", "legend": "<span><i class=\"dot\"></i>Quadriceps (primair)</span>\n    <span><i class=\"dot soft\"></i>Bilspieren en adductoren (secundair)</span>"}, {"id": "squatjump", "src": "https://claude.ai/artifact/Ukdu3dpij4syEzDeNnKXBz", "naam": "Squat jump", "groep": "Squats, lunges en sprongen", "type": "Snelkracht", "hoofdgroep": "Benen", "spiergroepen": ["Bovenbenen voor", "Billen", "Kuiten en enkels"], "houding": "Staand · geen materiaal", "iso": "Landingshouding (kwart-squat)", "dyn": "Squat jumps", "w": 1200, "h": 1000, "sub": "Explosieve beenkracht · bovenbenen, bilspieren en kuiten", "legend": "<span><i class=\"dot \"></i>Quadriceps en bilspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Kuitspieren (secundair)</span>"}, {"id": "startsprong", "src": "https://claude.ai/artifact/QupsgHHs5PPmPryWaxsHUm", "naam": "Startsprong (broad jump)", "groep": "Squats, lunges en sprongen", "type": "Snelkracht", "hoofdgroep": "Benen", "spiergroepen": ["Billen", "Bovenbenen voor", "Bovenbenen achter", "Kuiten en enkels"], "houding": "Startpositie · geen materiaal", "iso": null, "dyn": "Ver springen en zacht landen", "w": 1200, "h": 769, "sub": "Explosieve sprongkracht · bovenbenen, bilspieren en kuiten", "legend": "<span><i class=\"dot\"></i>Bovenbenen en bilspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Kuiten (secundair)</span>"}, {"id": "lunge", "src": "https://claude.ai/artifact/YDeMNwFFYZyH8xTtfNCbxP", "naam": "Lunge", "groep": "Squats, lunges en sprongen", "type": "Kracht", "hoofdgroep": "Benen", "spiergroepen": ["Bovenbenen voor", "Billen", "Heupen"], "houding": "Staand · geen materiaal", "iso": "Split squat onderin vasthouden", "dyn": "Lunges, afwisselend", "w": 1200, "h": 900, "sub": "Bovenbenen, bilspieren en heupen", "legend": "<span><i class=\"dot \"></i>Quadriceps en bilspieren voorste been (primair)</span>\n    <span><i class=\"dot soft\"></i>Heupbuiger achterste been (secundair)</span>"}, {"id": "calfraise", "src": "https://claude.ai/artifact/1q5dQLpHXmMdKG6C82s5Bq", "naam": "Calf raise", "groep": "Squats, lunges en sprongen", "type": "Kracht", "hoofdgroep": "Benen", "spiergroepen": ["Kuiten en enkels"], "houding": "Staand · geen materiaal", "iso": "Op de tenen vasthouden, vingertoppen tegen de muur voor balans", "dyn": "Op en neer", "w": 1200, "h": 900, "sub": "Kuitspieren en enkels", "legend": "<span><i class=\"dot \"></i>Kuitspier, gastrocnemius (primair)</span>\n    <span><i class=\"dot soft\"></i>Soleus (secundair, primair met gebogen knie)</span>"}, {"id": "scappushup", "src": "https://claude.ai/artifact/SWeTtPKzaFv15GJR2uWioM", "naam": "Scapular push-up", "groep": "Mobiliteit", "type": "Mobiliteit", "hoofdgroep": "Schouders", "spiergroepen": ["Schouders", "Bovenrug"], "houding": "Handen en knieën · geen materiaal", "iso": "Schouderbladen uitgeduwd vasthouden", "dyn": "Romp zakken en duwen tussen de schouders", "w": 1200, "h": 544, "sub": "Serratus anterior en schouderbladspieren", "legend": "<span><i class=\"dot\"></i>Serratus anterior (uitduwen)</span>\n    <span><i class=\"dot soft\"></i>Rhomboïden en middelste trapezius (samenknijpen)</span>"}, {"id": "catcow", "src": "https://claude.ai/artifact/PByoTbkTseL5HNB3RxjbDY", "naam": "Cat-cow", "groep": "Mobiliteit", "type": "Mobiliteit", "hoofdgroep": "Rug", "spiergroepen": ["Bovenrug", "Onderrug", "Buik/romp"], "houding": "Handen en knieën · geen materiaal", "iso": "Cat en cow elk vasthouden", "dyn": "Vloeiend wisselen", "w": 1200, "h": 544, "sub": "Mobiliteit van de wervelkolom", "legend": "<span><i class=\"dot\"></i>Buikspieren (cat, rug bol)</span>\n    <span><i class=\"dot soft\"></i>Rugstrekkers (cow, rug hol)</span>"}, {"id": "openbook", "src": "https://claude.ai/artifact/Q5Ntj3amC6dNRs5buTK4cf", "naam": "Open book", "groep": "Mobiliteit", "type": "Mobiliteit", "hoofdgroep": "Rug", "spiergroepen": ["Bovenrug", "Borst", "Schouders"], "houding": "Handen en knieën · geen materiaal", "iso": "Bovenarm open, borst naar het plafond", "dyn": "Openen en sluiten", "w": 1200, "h": 788, "sub": "Op handen en knieën · borst en bovenrug, rotatie van de borstwervelkolom", "legend": "<span><i class=\"dot\"></i>Borst en voorkant schouder, rek (primair)</span>\n    <span><i class=\"dot soft\"></i>Bovenrug en schuine buikspieren (secundair)</span>"}, {"id": "passthrough", "src": "https://claude.ai/artifact/6Tiva9K9fKHNZn6Q2GRUXq", "naam": "Shoulder pass-through", "groep": "Mobiliteit", "type": "Mobiliteit", "hoofdgroep": "Schouders", "spiergroepen": ["Schouders", "Borst"], "houding": "Op de hielen of staand · elastiek", "iso": "Armen boven het hoofd", "dyn": "Over het hoofd heen en terug", "w": 1200, "h": 825, "sub": "Met elastiek · schoudermobiliteit", "legend": "<span><i class=\"dot\"></i>Schouders en rotator cuff (primair)</span>\n    <span><i class=\"dot soft\"></i>Borst (rek, secundair)</span>"}, {"id": "hip9090", "src": "https://claude.ai/artifact/1cX7mViHFe9tbLG5xWfbA8", "naam": "90-90 hip rotations", "groep": "Mobiliteit", "type": "Mobiliteit", "hoofdgroep": "Heupen", "spiergroepen": ["Heupen", "Billen"], "houding": "Zittend op de grond · geen materiaal", "iso": "90-90-stand, romp ingedraaid naar het voorste been en voorover over de scheen", "dyn": "Knieën als ruitenwissers naar de andere kant, voeten blijven vóór je op de grond", "w": 1200, "h": 825, "sub": "Zittend op de grond · heupdraaiers, bilspieren en liezen", "legend": "<span><i class=\"dot\"></i>Heupdraaiers en bilspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Liezen en binnenkant dijen (secundair)</span>"}, {"id": "vouw", "src": "https://claude.ai/artifact/2QTKpn9pyNHoPVAUQVonYg", "naam": "Staande vouw met kniewissel", "groep": "Rek en strek", "type": "Rek en strek", "hoofdgroep": "Benen", "spiergroepen": ["Bovenbenen achter", "Billen", "Kuiten en enkels"], "houding": "Staand, voeten heupbreed · geen materiaal", "iso": "Heupen 90° of verder gebogen, rug lang, beide knieën gestrekt", "dyn": "Om en om één knie buigen en de andere strekken", "w": 1200, "h": 731, "sub": "Rek van de hamstrings, bilspieren en kuiten", "legend": "<span><i class=\"dot\"></i>Hamstrings en bilspieren (rek, primair)</span>\n    <span><i class=\"dot soft\"></i>Kuiten en onderrug (secundair)</span>"}, {"id": "jefferson", "src": "https://claude.ai/artifact/A2VwZnWgF9MvbZ9SxubnQA", "naam": "Jefferson curl", "groep": "Rek en strek", "type": "Rek en strek", "hoofdgroep": "Rug", "spiergroepen": ["Onderrug", "Bovenbenen achter", "Bovenrug"], "houding": "Staand, benen gestrekt · geen materiaal, of een dumbbell op een verhoging", "iso": "Helemaal afgerold hangen, rek in hamstrings en rug", "dyn": "Wervel voor wervel afrollen en weer oprollen", "w": 1200, "h": 825, "sub": "Rekoefening, staand wervel voor wervel afrollen · hamstrings en rugstrekkers", "legend": "<span><i class=\"dot\"></i>Hamstrings en rugstrekkers (rek, primair)</span>\n    <span><i class=\"dot soft\"></i>Kuiten (secundair)</span>"}, {"id": "childspose", "src": "https://claude.ai/artifact/5GV29EPzt4TYprMUK93BRw", "naam": "Child's pose met zijreik", "groep": "Rek en strek", "type": "Rek en strek", "hoofdgroep": "Rug", "spiergroepen": ["Bovenrug", "Schouders", "Onderrug"], "houding": "Op de hielen, armen voor · geen materiaal", "iso": "Armen schuin opzij, lat rekken", "dyn": "Afwisselend links en rechts", "w": 1200, "h": 863, "sub": "Rek van de lats, onderrug en schouders", "legend": "<span><i class=\"dot\"></i>Latissimus (rek, primair)</span>\n    <span><i class=\"dot soft\"></i>Onderrug (rek, secundair)</span>"}, {"id": "heupbuiger", "src": "https://claude.ai/artifact/9AdRAq3L6RERGmnXfLHpaU", "naam": "Heupbuiger-stretch", "groep": "Rek en strek", "type": "Rek en strek", "hoofdgroep": "Heupen", "spiergroepen": ["Heupen", "Bovenbenen voor"], "houding": "Half-knielend · geen materiaal", "iso": "Heup naar voren, achterste bil aangespannen", "dyn": "Heup naar voren en terug", "w": 1200, "h": 788, "sub": "Rek van de heupbuigers · bil van het achterste been aangespannen", "legend": "<span><i class=\"dot\"></i>Heupbuigers van het achterste been (rek, primair)</span>\n    <span><i class=\"dot soft\"></i>Bil, zijkant van de romp (secundair)</span>"}, {"id": "frog", "src": "https://claude.ai/artifact/EVzb3Pt3CBHWdxYwRB5xne", "naam": "Frog pose", "groep": "Rek en strek", "type": "Rek en strek", "hoofdgroep": "Heupen", "spiergroepen": ["Heupen"], "houding": "Op onderarmen of handen, knieën wijd, onderbenen evenwijdig · geen materiaal", "iso": "Heupen naar achteren, binnenkant dijen rekken", "dyn": "Heupen rustig naar voren en naar achteren", "w": 1200, "h": 881, "sub": "Rek van de binnenkant van de dijen en de heupen", "legend": "<span><i class=\"dot\"></i>Adductoren, binnenkant dijen (rek, primair)</span>\n    <span><i class=\"dot soft\"></i>Heupen en onderrug (secundair)</span>"}, {"id": "enkel", "src": "https://claude.ai/artifact/PKo9UAtNoSgWrKq4upe7do", "naam": "Enkel- en voetstrek", "groep": "Rek en strek", "type": "Rek en strek", "hoofdgroep": "Benen", "spiergroepen": ["Kuiten en enkels", "Bovenbenen voor"], "houding": "Op de hielen · geen materiaal", "iso": "Tenen gestrekt, knieën licht omhoog", "dyn": "Knieën rustig op en neer", "w": 1200, "h": 694, "sub": "Rek van de wreef, de voorkant van het onderbeen en de tenen", "legend": "<span><i class=\"dot\"></i>Scheenbeenspier en wreef (rek, primair)</span>\n    <span><i class=\"dot soft\"></i>Kuit (bij voet optrekken, secundair)</span>\n    <span><i class=\"dot soft\"></i>Voetzool en tenen (rek, bij tenen gestrekt)</span>"}, {"id": "deurpost", "src": "https://claude.ai/artifact/2NQTooJh2g8LFioKyQhomt", "naam": "Deurpost-rek borst en armen", "groep": "Rek en strek", "type": "Rek en strek", "hoofdgroep": "Schouders", "spiergroepen": ["Borst", "Schouders", "Armen"], "houding": "Staand achter de deurpost, onderarmen ertegen · deurpost als steun", "iso": "Romp door de deur, borstrek vasthouden", "dyn": "Rustig in en uit de rek leunen", "w": 1200, "h": 825, "sub": "Staand in een deuropening · borstspieren, voorkant schouders en biceps", "legend": "<span><i class=\"dot\"></i>Borstspieren (rek, primair)</span>\n    <span><i class=\"dot soft\"></i>Voorkant schouders en biceps (secundair)</span>"}, {"id": "touwtje", "src": "https://claude.ai/artifact/TBfM6Pa3WnR9m1yiCjyTvf", "naam": "Touwtje springen", "groep": "Warming-up en ademhaling", "type": "Warming-up", "hoofdgroep": "Hele lichaam", "spiergroepen": ["Kuiten en enkels", "Bovenbenen voor", "Schouders"], "houding": "Staand · springtouw", "iso": null, "dyn": "Springen over het touw", "tijd": true, "w": 1200, "h": 825, "sub": "Warming-up · kuiten, voetzolen en schouders", "legend": "<span><i class=\"dot\"></i>Kuiten (primair)</span>\n    <span><i class=\"dot soft\"></i>Schouders en onderarmen (secundair)</span>"}, {"id": "adem", "src": "https://claude.ai/artifact/JvtsAmAEYfP9oTwrTFyvk2", "naam": "Ontspannen ademhaling", "groep": "Warming-up en ademhaling", "type": "Ademhaling", "hoofdgroep": "Hele lichaam", "spiergroepen": ["Ademhaling"], "houding": "Op de hielen · geen materiaal", "iso": null, "dyn": "Box breathing 5-5-5-5 of 4-7-8", "ritme": {"Box breathing 5-5-5-5": [["in", 5], ["hold", 5], ["out", 5], ["hold", 5]], "4-7-8": [["in", 4], ["hold", 7], ["out", 8]]}, "w": 1200, "h": 825, "sub": "Op de hielen · middenrif en tussenribspieren", "legend": "<span><i class=\"dot\"></i>Middenrif (primair)</span>\n    <span><i class=\"dot soft\"></i>Tussenribspieren (secundair)</span>"}], "version": "1.1.0", "codes": {"plank": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Op de knieën", "Onderarmen", "Gestrekte armen", "Met beenlift", "Knie naar borst"], "sideplank": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Op de knieën", "Gestrekt", "Bovenbeen omhoog", "Met rotatie"], "bearplank": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Kruipen", "Shoulder taps", "Been kruislings strekken"], "pushup": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Op de knieën", "Gestrekt", "Push-up plus", "Stand bij vasthouden", "Hoog", "Laag"], "prone": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "I", "Y", "T", "W", "Flutter kicks", "Swimmers"], "birddog": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Klassiek", "Elleboog naar knie"], "glutebridge": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Twee benen", "Eén been", "Marching", "Met elastiek"], "rdl": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Handen op de heupen", "Stroomlijn", "Met elastiek"], "hollow": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Armen langs het lichaam", "Armen in stroomlijn", "Met flutter kicks"], "deadbug": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Alleen benen", "Kruislings", "Met elastiek in de handen"], "floorangels": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Op de rug", "Op de buik", "Staand tegen de muur"], "row": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Twee armen", "Eén arm", "Face pull"], "pullapart": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Horizontaal", "Diagonaal", "Boven het hoofd"], "exorotatie": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Elleboog in de zij", "90-90"], "pulldown": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Twee armen", "Eén arm", "Catch met hoge elleboog"], "pallof": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Staand", "Knielend", "Half-knielend", "Armen omhoog"], "bandwalk": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Bij de knieën", "Bij de enkels", "Monster walk"], "squat": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Armen voor", "Stroomlijn", "Met elastiek"], "horse": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Armen voor", "Vuisten in de zij"], "squatjump": ["Variatie", "Armen zwaaien", "Streamline jump", "Tuck jump"], "startsprong": ["Vorm", "Dynamisch", "Variatie", "Twee voeten", "Track start", "Armen in stroomlijn"], "lunge": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Voorwaarts", "Achterwaarts", "Zijwaarts", "Stroomlijn"], "calfraise": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Twee benen", "Eén been", "Gebogen knie"], "scappushup": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Op de knieën", "Plank, gestrekte armen"], "catcow": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Volledig", "Alleen het bekken kantelen"], "openbook": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Arm gestrekt", "Hand achter het hoofd"], "passthrough": ["Uitvoering", "Isometrisch", "Dynamisch", "Houding", "Op de hielen", "Staand", "Grip", "Smalle grip", "Brede grip"], "hip9090": ["Uitvoering", "Isometrisch", "Dynamisch", "Armen", "Handen achter", "Handen vrij"], "vouw": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Heupen 90°", "Handen naar de enkels", "Handen op de grond", "Voeten breed"], "jefferson": ["Uitvoering", "Isometrisch", "Dynamisch", "Gewicht", "Zonder gewicht", "Met gewicht (optie)"], "childspose": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Recht vooruit", "Naar links", "Naar rechts"], "heupbuiger": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Arm omhoog", "Met zijbuiging", "Met rotatie"], "frog": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Op de onderarmen", "Op de handen", "Halve frog"], "enkel": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Op de hielen", "Knieën omhoog", "Zittend met gestrekte benen", "Op de knieën, tenen gestrekt"], "deurpost": ["Uitvoering", "Isometrisch", "Dynamisch", "Armstand", "Y-vorm", "90-90"], "touwtje": ["Voeten", "Twee voeten", "Afwisselend"], "adem": ["Methode", "Box breathing 5-5-5-5", "4-7-8"]}}
+{"lists": {"groepen": ["Planken en steunen", "Rug en achterste keten", "Romp en schouders op de rug", "Staand met elastiek", "Squats, lunges en sprongen", "Mobiliteit", "Rek en strek", "Warming-up en ademhaling"], "types": ["Warming-up", "Ademhaling", "Kracht", "Snelkracht", "Mobiliteit", "Rek en strek"], "hoofdgroepen": ["Schouders", "Rug", "Romp", "Benen", "Heupen", "Hele lichaam"], "spiergroepen": ["Schouders", "Borst", "Armen", "Bovenrug", "Onderrug", "Buik/romp", "Billen", "Heupen", "Bovenbenen voor", "Bovenbenen achter", "Kuiten en enkels", "Ademhaling"]}, "exercises": [{"id": "plank", "src": "https://claude.ai/artifact/V6nvN1fGB24XEJRSqR9ZAg", "naam": "Plank", "groep": "Planken en steunen", "type": "Kracht", "hoofdgroep": "Romp", "spiergroepen": ["Buik/romp", "Schouders", "Billen"], "houding": "Onderarmen of gestrekte armen · geen materiaal", "iso": "Plank vasthouden", "dyn": "Shoulder taps / knie naar borst", "w": 1200, "h": 544, "sub": "Buikspieren, schouders en bilspieren", "legend": "<span><i class=\"dot\"></i>Buikspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Schouders en bilspieren (secundair)</span>"}, {"id": "sideplank", "src": "https://claude.ai/artifact/AEajH2bFwbXDx78VZ74hKh", "naam": "Side plank", "groep": "Planken en steunen", "type": "Kracht", "hoofdgroep": "Romp", "spiergroepen": ["Buik/romp", "Heupen", "Schouders"], "houding": "Op de zij, onderarm · geen materiaal", "iso": "Heup omhoog vasthouden", "dyn": "Heup zakken en heffen", "w": 1200, "h": 788, "sub": "Op de zij, onderarm · schuine buikspieren, zijkant bilspieren en schouder", "legend": "<span><i class=\"dot\"></i>Schuine buikspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Zijkant bilspieren en schouder (secundair)</span>"}, {"id": "bearplank", "src": "https://claude.ai/artifact/BUxsdp3WQUEkBjMomweyAi", "naam": "Bear crawl", "groep": "Planken en steunen", "type": "Kracht", "hoofdgroep": "Romp", "spiergroepen": ["Buik/romp", "Schouders", "Bovenbenen voor"], "houding": "Handen plat, op de tenen met de hielen omhoog, knieën net boven de grond · geen materiaal", "iso": "Knieën 3 cm boven de grond", "dyn": "Kruipen vooruit en achteruit, of shoulder taps", "w": 1200, "h": 788, "sub": "Buikspieren, quadriceps en schouders", "legend": "<span><i class=\"dot\"></i>Buikspieren en quadriceps (primair)</span>\n    <span><i class=\"dot soft\"></i>Schouders, schuine buikspieren en bilspieren (secundair)</span>"}, {"id": "pushup", "src": "https://claude.ai/artifact/964GfmSxK9FK182Xuf1ayj", "naam": "Push-up", "groep": "Planken en steunen", "type": "Kracht", "hoofdgroep": "Schouders", "spiergroepen": ["Borst", "Schouders", "Armen", "Buik/romp"], "houding": "Plank of op de knieën · geen materiaal", "iso": "Hoog (halverwege) of laag (onderin) vasthouden", "dyn": "Push-up", "w": 1200, "h": 619, "sub": "Borst, triceps en voorkant schouders", "legend": "<span><i class=\"dot\"></i>Borstspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Triceps en voorkant schouders (secundair)</span>\n    <span data-when=\"v:plus\"><i class=\"dot\"></i>Serratus anterior (plus: schouderbladen uitduwen)</span>"}, {"id": "prone", "src": "https://claude.ai/artifact/Y4uDgwaLFvEfkNzPWVYdmZ", "naam": "Prone raises", "groep": "Rug en achterste keten", "type": "Kracht", "hoofdgroep": "Rug", "spiergroepen": ["Bovenrug", "Onderrug", "Schouders", "Billen"], "houding": "Op de buik · geen materiaal", "iso": "Armen, borst en benen omhoog vasthouden", "dyn": "Heffen en zakken", "w": 1200, "h": 825, "sub": "Bovenrug, schouders en onderrug", "legend": "<span><i class=\"dot\"></i>Trapezius en rhomboïden (primair)</span>\n    <span><i class=\"dot soft\"></i>Rugstrekkers en bilspieren (secundair)</span>"}, {"id": "birddog", "src": "https://claude.ai/artifact/M4WZvJ1Pq6bT6pkUBCuq3Y", "naam": "Bird dog", "groep": "Rug en achterste keten", "type": "Kracht", "hoofdgroep": "Romp", "spiergroepen": ["Buik/romp", "Onderrug", "Billen", "Schouders"], "houding": "Handen en knieën · geen materiaal", "iso": "Arm en tegenovergesteld been gestrekt", "dyn": "Afwisselend strekken", "w": 1200, "h": 788, "sub": "Rompstabiliteit · onderrug, billen en diepe buikspieren", "legend": "<span><i class=\"dot\"></i>Bilspieren en rugstrekkers (primair)</span>\n    <span><i class=\"dot soft\"></i>Diepe buikspieren (secundair)</span>"}, {"id": "glutebridge", "src": "https://claude.ai/artifact/DWHcYRCfG4sSaJTzUZVBxv", "naam": "Glute bridge", "groep": "Rug en achterste keten", "type": "Kracht", "hoofdgroep": "Benen", "spiergroepen": ["Billen", "Bovenbenen achter", "Onderrug"], "houding": "Op de rug · geen materiaal of elastiek boven de knieën", "iso": "Heupen boven vasthouden", "dyn": "Heffen en zakken", "w": 1200, "h": 660, "sub": "Bilspieren en hamstrings", "legend": "<span><i class=\"dot\"></i>Gluteus maximus (primair)</span>\n    <span><i class=\"dot soft\"></i>Hamstrings (secundair)</span>\n    <span data-when=\"v:band\"><i class=\"dot soft\"></i>Gluteus medius (knieën naar buiten)</span>"}, {"id": "rdl", "src": "https://claude.ai/artifact/CGCd6fPF4j1P1NY3XNZoiC", "naam": "Single-leg RDL", "groep": "Rug en achterste keten", "type": "Kracht", "hoofdgroep": "Benen", "spiergroepen": ["Bovenbenen achter", "Billen", "Onderrug"], "houding": "Staand op één been · geen materiaal of elastiek onder de voet", "iso": "Romp horizontaal, been naar achteren; bij wiebelen vingertoppen tegen de muur", "dyn": "Voorover kantelen en terug", "w": 1200, "h": 900, "sub": "Hamstrings, bilspieren en rugstrekkers", "legend": "<span><i class=\"dot \"></i>Hamstrings en bilspieren standbeen (primair)</span>\n    <span><i class=\"dot soft\"></i>Rugstrekkers (secundair)</span>"}, {"id": "hollow", "src": "https://claude.ai/artifact/47xZPNERT7yt2koR7wAm39", "naam": "Hollow body", "groep": "Romp en schouders op de rug", "type": "Kracht", "hoofdgroep": "Romp", "spiergroepen": ["Buik/romp", "Heupen"], "houding": "Op de rug · geen materiaal", "iso": "Hollow hold met armen in stroomlijn", "dyn": "Hollow rocks", "w": 1200, "h": 563, "sub": "Op de rug · rechte en diepe buikspieren, heupbuigers", "legend": "<span><i class=\"dot\"></i>Rechte en diepe buikspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Heupbuigers en quadriceps (secundair)</span>"}, {"id": "deadbug", "src": "https://claude.ai/artifact/16VhbsHUWGgwynnhsVLLtk", "naam": "Dead bug", "groep": "Romp en schouders op de rug", "type": "Kracht", "hoofdgroep": "Romp", "spiergroepen": ["Buik/romp", "Heupen"], "houding": "Op de rug, armen en knieën omhoog · geen materiaal of elastiek", "iso": "Arm en tegenovergesteld been gestrekt", "dyn": "Afwisselend strekken", "w": 1200, "h": 788, "sub": "Op de rug · diepe buikspieren, rechte buikspier en heupbuigers", "legend": "<span><i class=\"dot\"></i>Diepe en rechte buikspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Heupbuigers en schouders (secundair)</span>"}, {"id": "floorangels", "src": "https://claude.ai/artifact/TeBxVFgDNPDRzmjkMqNMhc", "naam": "Floor angels", "groep": "Romp en schouders op de rug", "type": "Mobiliteit", "hoofdgroep": "Schouders", "spiergroepen": ["Schouders", "Bovenrug"], "houding": "Op de rug · geen materiaal", "iso": "Armen in Y tegen de grond", "dyn": "Armen van W naar Y en terug", "w": 1200, "h": 844, "sub": "Op de rug, op de buik of tegen de muur · middelste en onderste trapezius, schouders", "legend": "<span><i class=\"dot\"></i>Middelste en onderste trapezius (primair)</span>\n    <span><i class=\"dot soft\"></i>Schouders en borst, rek (secundair)</span>"}, {"id": "row", "src": "https://claude.ai/artifact/SdzNgTyisvywvkXvRU5Unw", "naam": "Standing row", "groep": "Staand met elastiek", "type": "Kracht", "hoofdgroep": "Rug", "spiergroepen": ["Bovenrug", "Schouders", "Armen"], "houding": "Staand · elastiek op buikhoogte", "iso": "Ellebogen achter, schouderbladen samen", "dyn": "Roeien", "w": 1200, "h": 938, "sub": "Met elastiek · bovenrug en achterkant schouders", "legend": "<span data-when=\"twee,een\"><i class=\"dot\"></i>Rhomboïden en middelste trapezius (primair)</span>\n    <span data-when=\"twee,een\"><i class=\"dot soft\"></i>Latissimus en achterste schouder (secundair)</span>\n    <span data-when=\"face\" hidden><i class=\"dot\"></i>Achterste schouder en rotator cuff (primair)</span>\n    <span data-when=\"face\" hidden><i class=\"dot soft\"></i>Rhomboïden en middelste trapezius (secundair)</span>"}, {"id": "pullapart", "src": "https://claude.ai/artifact/MEMstX2RvwQfEbtGHKFVfd", "naam": "Band pull-apart", "groep": "Staand met elastiek", "type": "Kracht", "hoofdgroep": "Schouders", "spiergroepen": ["Bovenrug", "Schouders"], "houding": "Staand · elastiek in de handen", "iso": "Uit elkaar getrokken vasthouden", "dyn": "Uit elkaar trekken en terug", "w": 1200, "h": 975, "sub": "Met elastiek · bovenrug en achterkant schouders", "legend": "<span><i class=\"dot\"></i>Rhomboïden en middelste trapezius (primair)</span>\n    <span><i class=\"dot soft\"></i>Achterste schouder (secundair)</span>"}, {"id": "exorotatie", "src": "https://claude.ai/artifact/UxyAerojXotU4XFftmt7bt", "naam": "Exorotatie", "groep": "Staand met elastiek", "type": "Kracht", "hoofdgroep": "Schouders", "spiergroepen": ["Schouders"], "houding": "Staand · elastiek opzij op ellebooghoogte", "iso": "Onderarm naar buiten gedraaid", "dyn": "Naar buiten draaien en terug", "w": 1200, "h": 938, "sub": "Met elastiek · rotator cuff en achterkant schouder", "legend": "<span><i class=\"dot\"></i>Infraspinatus en teres minor, rotator cuff (primair)</span>\n    <span><i class=\"dot soft\"></i>Achterste schouder (secundair)</span>"}, {"id": "pulldown", "src": "https://claude.ai/artifact/VtEB94sgW2XkjLYhd2NCYM", "naam": "Straight-arm pulldown (zwemtrek)", "groep": "Staand met elastiek", "type": "Kracht", "hoofdgroep": "Rug", "spiergroepen": ["Bovenrug", "Schouders", "Buik/romp"], "houding": "Licht voorover · elastiek hoog vast", "iso": "Armen bij de heupen vasthouden", "dyn": "Gestrekte armen van boven naar de heupen", "w": 1200, "h": 938, "sub": "Met elastiek · zwemtrek met gestrekte armen", "legend": "<span><i class=\"dot\"></i>Latissimus dorsi (primair)</span>\n    <span><i class=\"dot soft\"></i>Triceps en achterste schouder (secundair)</span>"}, {"id": "pallof", "src": "https://claude.ai/artifact/Ru9nwVyo9o5RpfyHN3bd5c", "naam": "Pallof press", "groep": "Staand met elastiek", "type": "Kracht", "hoofdgroep": "Romp", "spiergroepen": ["Buik/romp", "Schouders"], "houding": "Staand of knielend · elastiek opzij op borsthoogte", "iso": "Armen gestrekt voor de borst", "dyn": "Uitdrukken en terug", "w": 1200, "h": 900, "sub": "Met elastiek · anti-rotatie voor de romp", "legend": "<span><i class=\"dot\"></i>Schuine en diepe buikspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Bilspieren en schouders (secundair)</span>"}, {"id": "bandwalk", "src": "https://claude.ai/artifact/Cf2JkjGsA6ZYfPUT4pCnPD", "naam": "Lateral band walk", "groep": "Staand met elastiek", "type": "Kracht", "hoofdgroep": "Heupen", "spiergroepen": ["Billen", "Heupen", "Bovenbenen voor"], "houding": "Licht gebogen knieën · elastiek boven de knieën of enkels", "iso": "Mini-squat, knieën naar buiten", "dyn": "Zijwaarts stappen", "w": 1200, "h": 825, "sub": "Met elastiek · zijkant heup en billen", "legend": "<span><i class=\"dot\"></i>Gluteus medius, zijkant heup (primair)</span>\n    <span><i class=\"dot soft\"></i>Bilspieren en bovenbenen (secundair)</span>"}, {"id": "squat", "src": "https://claude.ai/artifact/7rgHRJeGo6dJJwCGJoBeCh", "naam": "Squat", "groep": "Squats, lunges en sprongen", "type": "Kracht", "hoofdgroep": "Benen", "spiergroepen": ["Bovenbenen voor", "Billen"], "houding": "Staand · geen materiaal of elastiek boven de knieën", "iso": "Wall sit: rug tegen de muur, dijen horizontaal", "dyn": "Squat", "w": 1200, "h": 900, "sub": "Bovenbenen en bilspieren", "legend": "<span><i class=\"dot \"></i>Quadriceps (primair)</span>\n    <span><i class=\"dot soft\"></i>Bilspieren (secundair)</span>"}, {"id": "horse", "src": "https://claude.ai/artifact/CP5CAEtauZhNB6s6xa6gXb", "naam": "Horse stance squat", "groep": "Squats, lunges en sprongen", "type": "Kracht", "hoofdgroep": "Benen", "spiergroepen": ["Bovenbenen voor", "Billen", "Heupen"], "houding": "Staand, breed · geen materiaal", "iso": "Diep vasthouden, dijen bijna horizontaal", "dyn": "Volledige squat in brede stand", "w": 1200, "h": 788, "sub": "Breed staand · bovenbenen, bilspieren en binnenkant dijen", "legend": "<span><i class=\"dot\"></i>Quadriceps (primair)</span>\n    <span><i class=\"dot soft\"></i>Bilspieren en adductoren (secundair)</span>"}, {"id": "squatjump", "src": "https://claude.ai/artifact/Ukdu3dpij4syEzDeNnKXBz", "naam": "Squat jump", "groep": "Squats, lunges en sprongen", "type": "Snelkracht", "hoofdgroep": "Benen", "spiergroepen": ["Bovenbenen voor", "Billen", "Kuiten en enkels"], "houding": "Staand · geen materiaal", "iso": "Landingshouding (kwart-squat)", "dyn": "Squat jumps", "w": 1200, "h": 1000, "sub": "Explosieve beenkracht · bovenbenen, bilspieren en kuiten", "legend": "<span><i class=\"dot \"></i>Quadriceps en bilspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Kuitspieren (secundair)</span>"}, {"id": "startsprong", "src": "https://claude.ai/artifact/QupsgHHs5PPmPryWaxsHUm", "naam": "Startsprong (broad jump)", "groep": "Squats, lunges en sprongen", "type": "Snelkracht", "hoofdgroep": "Benen", "spiergroepen": ["Billen", "Bovenbenen voor", "Bovenbenen achter", "Kuiten en enkels"], "houding": "Startpositie · geen materiaal", "iso": null, "dyn": "Ver springen en zacht landen", "w": 1200, "h": 769, "sub": "Explosieve sprongkracht · bovenbenen, bilspieren en kuiten", "legend": "<span><i class=\"dot\"></i>Bovenbenen en bilspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Kuiten (secundair)</span>"}, {"id": "lunge", "src": "https://claude.ai/artifact/YDeMNwFFYZyH8xTtfNCbxP", "naam": "Lunge", "groep": "Squats, lunges en sprongen", "type": "Kracht", "hoofdgroep": "Benen", "spiergroepen": ["Bovenbenen voor", "Billen", "Heupen"], "houding": "Staand · geen materiaal", "iso": "Split squat onderin vasthouden", "dyn": "Lunges, afwisselend", "w": 1200, "h": 900, "sub": "Bovenbenen, bilspieren en heupen", "legend": "<span><i class=\"dot \"></i>Quadriceps en bilspieren voorste been (primair)</span>\n    <span><i class=\"dot soft\"></i>Heupbuiger achterste been (secundair)</span>"}, {"id": "calfraise", "src": "https://claude.ai/artifact/1q5dQLpHXmMdKG6C82s5Bq", "naam": "Calf raise", "groep": "Squats, lunges en sprongen", "type": "Kracht", "hoofdgroep": "Benen", "spiergroepen": ["Kuiten en enkels"], "houding": "Staand · geen materiaal", "iso": "Op de tenen vasthouden, vingertoppen tegen de muur voor balans", "dyn": "Op en neer", "w": 1200, "h": 900, "sub": "Kuitspieren en enkels", "legend": "<span><i class=\"dot \"></i>Kuitspier, gastrocnemius (primair)</span>\n    <span><i class=\"dot soft\"></i>Soleus (secundair, primair met gebogen knie)</span>"}, {"id": "scappushup", "src": "https://claude.ai/artifact/SWeTtPKzaFv15GJR2uWioM", "naam": "Scapular push-up", "groep": "Mobiliteit", "type": "Mobiliteit", "hoofdgroep": "Schouders", "spiergroepen": ["Schouders", "Bovenrug"], "houding": "Handen en knieën · geen materiaal", "iso": "Schouderbladen uitgeduwd vasthouden", "dyn": "Romp zakken en duwen tussen de schouders", "w": 1200, "h": 544, "sub": "Serratus anterior en schouderbladspieren", "legend": "<span><i class=\"dot\"></i>Serratus anterior (uitduwen)</span>\n    <span><i class=\"dot soft\"></i>Rhomboïden en middelste trapezius (samenknijpen)</span>"}, {"id": "catcow", "src": "https://claude.ai/artifact/PByoTbkTseL5HNB3RxjbDY", "naam": "Cat-cow", "groep": "Mobiliteit", "type": "Mobiliteit", "hoofdgroep": "Rug", "spiergroepen": ["Bovenrug", "Onderrug", "Buik/romp"], "houding": "Handen en knieën · geen materiaal", "iso": "Cat en cow elk vasthouden", "dyn": "Vloeiend wisselen", "w": 1200, "h": 544, "sub": "Mobiliteit van de wervelkolom", "legend": "<span><i class=\"dot\"></i>Buikspieren (cat, rug bol)</span>\n    <span><i class=\"dot soft\"></i>Rugstrekkers (cow, rug hol)</span>"}, {"id": "openbook", "src": "https://claude.ai/artifact/Q5Ntj3amC6dNRs5buTK4cf", "naam": "Open book", "groep": "Mobiliteit", "type": "Mobiliteit", "hoofdgroep": "Rug", "spiergroepen": ["Bovenrug", "Borst", "Schouders"], "houding": "Handen en knieën · geen materiaal", "iso": "Bovenarm open, borst naar het plafond", "dyn": "Openen en sluiten", "w": 1200, "h": 788, "sub": "Op handen en knieën · borst en bovenrug, rotatie van de borstwervelkolom", "legend": "<span><i class=\"dot\"></i>Borst en voorkant schouder, rek (primair)</span>\n    <span><i class=\"dot soft\"></i>Bovenrug en schuine buikspieren (secundair)</span>"}, {"id": "passthrough", "src": "https://claude.ai/artifact/6Tiva9K9fKHNZn6Q2GRUXq", "naam": "Shoulder pass-through", "groep": "Mobiliteit", "type": "Mobiliteit", "hoofdgroep": "Schouders", "spiergroepen": ["Schouders", "Borst"], "houding": "Op de hielen of staand · elastiek", "iso": "Armen boven het hoofd", "dyn": "Over het hoofd heen en terug", "w": 1200, "h": 825, "sub": "Met elastiek · schoudermobiliteit", "legend": "<span><i class=\"dot\"></i>Schouders en rotator cuff (primair)</span>\n    <span><i class=\"dot soft\"></i>Borst (rek, secundair)</span>"}, {"id": "hip9090", "src": "https://claude.ai/artifact/1cX7mViHFe9tbLG5xWfbA8", "naam": "90-90 hip rotations", "groep": "Mobiliteit", "type": "Mobiliteit", "hoofdgroep": "Heupen", "spiergroepen": ["Heupen", "Billen"], "houding": "Zittend op de grond · geen materiaal", "iso": "90-90-stand, romp ingedraaid naar het voorste been en voorover over de scheen", "dyn": "Knieën als ruitenwissers naar de andere kant, voeten blijven vóór je op de grond", "w": 1200, "h": 825, "sub": "Zittend op de grond · heupdraaiers, bilspieren en liezen", "legend": "<span><i class=\"dot\"></i>Heupdraaiers en bilspieren (primair)</span>\n    <span><i class=\"dot soft\"></i>Liezen en binnenkant dijen (secundair)</span>"}, {"id": "vouw", "src": "https://claude.ai/artifact/2QTKpn9pyNHoPVAUQVonYg", "naam": "Staande vouw met kniewissel", "groep": "Rek en strek", "type": "Rek en strek", "hoofdgroep": "Benen", "spiergroepen": ["Bovenbenen achter", "Billen", "Kuiten en enkels"], "houding": "Staand, voeten heupbreed · geen materiaal", "iso": "Heupen 90° of verder gebogen, rug lang, beide knieën gestrekt", "dyn": "Om en om één knie buigen en de andere strekken", "w": 1200, "h": 731, "sub": "Rek van de hamstrings, bilspieren en kuiten", "legend": "<span><i class=\"dot\"></i>Hamstrings en bilspieren (rek, primair)</span>\n    <span><i class=\"dot soft\"></i>Kuiten en onderrug (secundair)</span>"}, {"id": "jefferson", "src": "https://claude.ai/artifact/A2VwZnWgF9MvbZ9SxubnQA", "naam": "Jefferson curl", "groep": "Rek en strek", "type": "Rek en strek", "hoofdgroep": "Rug", "spiergroepen": ["Onderrug", "Bovenbenen achter", "Bovenrug"], "houding": "Staand, benen gestrekt · geen materiaal, of een dumbbell op een verhoging", "iso": "Helemaal afgerold hangen, rek in hamstrings en rug", "dyn": "Wervel voor wervel afrollen en weer oprollen", "w": 1200, "h": 825, "sub": "Rekoefening, staand wervel voor wervel afrollen · hamstrings en rugstrekkers", "legend": "<span><i class=\"dot\"></i>Hamstrings en rugstrekkers (rek, primair)</span>\n    <span><i class=\"dot soft\"></i>Kuiten (secundair)</span>"}, {"id": "childspose", "src": "https://claude.ai/artifact/5GV29EPzt4TYprMUK93BRw", "naam": "Child's pose met zijreik", "groep": "Rek en strek", "type": "Rek en strek", "hoofdgroep": "Rug", "spiergroepen": ["Bovenrug", "Schouders", "Onderrug"], "houding": "Op de hielen, armen voor · geen materiaal", "iso": "Armen schuin opzij, lat rekken", "dyn": "Afwisselend links en rechts", "w": 1200, "h": 863, "sub": "Rek van de lats, onderrug en schouders", "legend": "<span><i class=\"dot\"></i>Latissimus (rek, primair)</span>\n    <span><i class=\"dot soft\"></i>Onderrug (rek, secundair)</span>"}, {"id": "heupbuiger", "src": "https://claude.ai/artifact/9AdRAq3L6RERGmnXfLHpaU", "naam": "Heupbuiger-stretch", "groep": "Rek en strek", "type": "Rek en strek", "hoofdgroep": "Heupen", "spiergroepen": ["Heupen", "Bovenbenen voor"], "houding": "Half-knielend · geen materiaal", "iso": "Heup naar voren, achterste bil aangespannen", "dyn": "Heup naar voren en terug", "w": 1200, "h": 788, "sub": "Rek van de heupbuigers · bil van het achterste been aangespannen", "legend": "<span><i class=\"dot\"></i>Heupbuigers van het achterste been (rek, primair)</span>\n    <span><i class=\"dot soft\"></i>Bil, zijkant van de romp (secundair)</span>"}, {"id": "frog", "src": "https://claude.ai/artifact/EVzb3Pt3CBHWdxYwRB5xne", "naam": "Frog pose", "groep": "Rek en strek", "type": "Rek en strek", "hoofdgroep": "Heupen", "spiergroepen": ["Heupen"], "houding": "Op onderarmen of handen, knieën wijd, onderbenen evenwijdig · geen materiaal", "iso": "Heupen naar achteren, binnenkant dijen rekken", "dyn": "Heupen rustig naar voren en naar achteren", "w": 1200, "h": 881, "sub": "Rek van de binnenkant van de dijen en de heupen", "legend": "<span><i class=\"dot\"></i>Adductoren, binnenkant dijen (rek, primair)</span>\n    <span><i class=\"dot soft\"></i>Heupen en onderrug (secundair)</span>"}, {"id": "enkel", "src": "https://claude.ai/artifact/PKo9UAtNoSgWrKq4upe7do", "naam": "Enkel- en voetstrek", "groep": "Rek en strek", "type": "Rek en strek", "hoofdgroep": "Benen", "spiergroepen": ["Kuiten en enkels", "Bovenbenen voor"], "houding": "Op de hielen · geen materiaal", "iso": "Tenen gestrekt, knieën licht omhoog", "dyn": "Knieën rustig op en neer", "w": 1200, "h": 694, "sub": "Rek van de wreef, de voorkant van het onderbeen en de tenen", "legend": "<span><i class=\"dot\"></i>Scheenbeenspier en wreef (rek, primair)</span>\n    <span><i class=\"dot soft\"></i>Kuit (bij voet optrekken, secundair)</span>\n    <span><i class=\"dot soft\"></i>Voetzool en tenen (rek, bij tenen gestrekt)</span>"}, {"id": "deurpost", "src": "https://claude.ai/artifact/2NQTooJh2g8LFioKyQhomt", "naam": "Deurpost-rek borst en armen", "groep": "Rek en strek", "type": "Rek en strek", "hoofdgroep": "Schouders", "spiergroepen": ["Borst", "Schouders", "Armen"], "houding": "Staand achter de deurpost, onderarmen ertegen · deurpost als steun", "iso": "Romp door de deur, borstrek vasthouden", "dyn": "Rustig in en uit de rek leunen", "w": 1200, "h": 825, "sub": "Staand in een deuropening · borstspieren, voorkant schouders en biceps", "legend": "<span><i class=\"dot\"></i>Borstspieren (rek, primair)</span>\n    <span><i class=\"dot soft\"></i>Voorkant schouders en biceps (secundair)</span>"}, {"id": "touwtje", "src": "https://claude.ai/artifact/TBfM6Pa3WnR9m1yiCjyTvf", "naam": "Touwtje springen", "groep": "Warming-up en ademhaling", "type": "Warming-up", "hoofdgroep": "Hele lichaam", "spiergroepen": ["Kuiten en enkels", "Bovenbenen voor", "Schouders"], "houding": "Staand · springtouw", "iso": null, "dyn": "Springen over het touw", "tijd": true, "w": 1200, "h": 825, "sub": "Warming-up · kuiten, voetzolen en schouders", "legend": "<span><i class=\"dot\"></i>Kuiten (primair)</span>\n    <span><i class=\"dot soft\"></i>Schouders en onderarmen (secundair)</span>"}, {"id": "adem", "src": "https://claude.ai/artifact/JvtsAmAEYfP9oTwrTFyvk2", "naam": "Ontspannen ademhaling", "groep": "Warming-up en ademhaling", "type": "Ademhaling", "hoofdgroep": "Hele lichaam", "spiergroepen": ["Ademhaling"], "houding": "Op de hielen · geen materiaal", "iso": null, "dyn": "Box breathing 5-5-5-5 of 4-7-8", "ritme": {"Box breathing 5-5-5-5": [["in", 5], ["hold", 5], ["out", 5], ["hold", 5]], "4-7-8": [["in", 4], ["hold", 7], ["out", 8]]}, "w": 1200, "h": 825, "sub": "Op de hielen · middenrif en tussenribspieren", "legend": "<span><i class=\"dot\"></i>Middenrif (primair)</span>\n    <span><i class=\"dot soft\"></i>Tussenribspieren (secundair)</span>"}], "version": "1.2.0", "codes": {"plank": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Op de knieën", "Onderarmen", "Gestrekte armen", "Met beenlift", "Knie naar borst"], "sideplank": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Op de knieën", "Gestrekt", "Bovenbeen omhoog", "Met rotatie"], "bearplank": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Kruipen", "Shoulder taps", "Been kruislings strekken"], "pushup": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Op de knieën", "Gestrekt", "Push-up plus", "Stand bij vasthouden", "Hoog", "Laag"], "prone": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "I", "Y", "T", "W", "Flutter kicks", "Swimmers"], "birddog": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Klassiek", "Elleboog naar knie"], "glutebridge": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Twee benen", "Eén been", "Marching", "Met elastiek"], "rdl": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Handen op de heupen", "Stroomlijn", "Met elastiek"], "hollow": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Armen langs het lichaam", "Armen in stroomlijn", "Met flutter kicks"], "deadbug": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Alleen benen", "Kruislings", "Met elastiek in de handen"], "floorangels": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Op de rug", "Op de buik", "Staand tegen de muur"], "row": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Twee armen", "Eén arm", "Face pull"], "pullapart": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Horizontaal", "Diagonaal", "Boven het hoofd"], "exorotatie": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Elleboog in de zij", "90-90"], "pulldown": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Twee armen", "Eén arm", "Catch met hoge elleboog"], "pallof": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Staand", "Knielend", "Half-knielend", "Armen omhoog"], "bandwalk": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Bij de knieën", "Bij de enkels", "Monster walk"], "squat": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Armen voor", "Stroomlijn", "Met elastiek"], "horse": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Armen voor", "Vuisten in de zij"], "squatjump": ["Variatie", "Armen zwaaien", "Streamline jump", "Tuck jump"], "startsprong": ["Vorm", "Dynamisch", "Variatie", "Twee voeten", "Track start", "Armen in stroomlijn"], "lunge": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Voorwaarts", "Achterwaarts", "Zijwaarts", "Stroomlijn"], "calfraise": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Twee benen", "Eén been", "Gebogen knie"], "scappushup": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Op de knieën", "Plank, gestrekte armen"], "catcow": ["Uitvoering", "Isometrisch", "Dynamisch", "Variatie", "Volledig", "Alleen het bekken kantelen"], "openbook": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Arm gestrekt", "Hand achter het hoofd"], "passthrough": ["Uitvoering", "Isometrisch", "Dynamisch", "Houding", "Op de hielen", "Staand", "Grip", "Smalle grip", "Brede grip"], "hip9090": ["Uitvoering", "Isometrisch", "Dynamisch", "Armen", "Handen achter", "Handen vrij"], "vouw": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Heupen 90°", "Handen naar de enkels", "Handen op de grond", "Voeten breed"], "jefferson": ["Uitvoering", "Isometrisch", "Dynamisch", "Gewicht", "Zonder gewicht", "Met gewicht (optie)"], "childspose": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Recht vooruit", "Naar links", "Naar rechts"], "heupbuiger": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Arm omhoog", "Met zijbuiging", "Met rotatie"], "frog": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Op de onderarmen", "Op de handen", "Halve frog"], "enkel": ["Vorm", "Isometrisch", "Dynamisch", "Variatie", "Op de hielen", "Knieën omhoog", "Zittend met gestrekte benen", "Op de knieën, tenen gestrekt"], "deurpost": ["Uitvoering", "Isometrisch", "Dynamisch", "Armstand", "Y-vorm", "90-90"], "touwtje": ["Voeten", "Twee voeten", "Afwisselend"], "adem": ["Methode", "Box breathing 5-5-5-5", "4-7-8"]}, "cyc": {"plank": {"Variatie=Op de knieën": 2.8, "Variatie=Onderarmen": 4, "Variatie=Gestrekte armen": 2.8, "Variatie=Met beenlift": 3.8, "Variatie=Knie naar borst": 5.2}, "sideplank": {"Variatie=Op de knieën": 2.6, "Variatie=Gestrekt": 2.6, "Variatie=Bovenbeen omhoog": 2.6, "Variatie=Met rotatie": 4.3}, "bearplank": {"Variatie=Kruipen": 5.4, "Variatie=Shoulder taps": 3.2, "Variatie=Been kruislings strekken": 5}, "pushup": {"Variatie=Op de knieën": 2.8, "Variatie=Gestrekt": 2.8, "Variatie=Push-up plus": 4}, "prone": {"Variatie=I": 4, "Variatie=Y": 4, "Variatie=T": 4, "Variatie=W": 4, "Variatie=Flutter kicks": 5.6, "Variatie=Swimmers": 5.6}, "birddog": {"Variatie=Klassiek": 6.48, "Variatie=Elleboog naar knie": 19.2}, "glutebridge": {"Variatie=Twee benen": 4, "Variatie=Eén been": 4, "Variatie=Marching": 4, "Variatie=Met elastiek": 4}, "rdl": {"Variatie=Handen op de heupen": 3.6, "Variatie=Stroomlijn": 3.6, "Variatie=Met elastiek": 3.6}, "hollow": {"Variatie=Armen langs het lichaam": 3, "Variatie=Armen in stroomlijn": 3, "Variatie=Met flutter kicks": 1.2}, "deadbug": {"Variatie=Alleen benen": 6, "Variatie=Kruislings": 6, "Variatie=Met elastiek in de handen": 6}, "floorangels": {"Variatie=Op de rug": 3.9, "Variatie=Op de buik": 3.9, "Variatie=Staand tegen de muur": 3.9}, "row": {"Variatie=Twee armen": 2.47, "Variatie=Eén arm": 2.47, "Variatie=Face pull": 2.47}, "pullapart": {"Variatie=Horizontaal": 3.6, "Variatie=Diagonaal": 7.2, "Variatie=Boven het hoofd": 3.6}, "exorotatie": {"Variatie=Elleboog in de zij": 3.5, "Variatie=90-90": 3.5}, "pulldown": {"Variatie=Twee armen": 3.8, "Variatie=Eén arm": 3.8, "Variatie=Catch met hoge elleboog": 3.8}, "pallof": {"Variatie=Staand": 3.4, "Variatie=Knielend": 3.4, "Variatie=Half-knielend": 3.4, "Variatie=Armen omhoog": 4.9}, "bandwalk": {"Variatie=Bij de knieën": 3.6, "Variatie=Bij de enkels": 3.6, "Variatie=Monster walk": 3.6}, "squat": {"Variatie=Armen voor": 3.6, "Variatie=Stroomlijn": 3.6, "Variatie=Met elastiek": 3.6}, "horse": {"Variatie=Armen voor": 3.4, "Variatie=Vuisten in de zij": 3.4}, "squatjump": {"Variatie=Armen zwaaien": 3, "Variatie=Streamline jump": 3, "Variatie=Tuck jump": 3}, "startsprong": {"Variatie=Twee voeten": 3.9, "Variatie=Track start": 3.9, "Variatie=Armen in stroomlijn": 3.9}, "lunge": {"Variatie=Voorwaarts": 5.6, "Variatie=Achterwaarts": 5.6, "Variatie=Zijwaarts": 5.6, "Variatie=Stroomlijn": 5.6}, "calfraise": {"Variatie=Twee benen": 2.4, "Variatie=Eén been": 2.4, "Variatie=Gebogen knie": 2.4}, "scappushup": {"Variatie=Op de knieën": 3.6, "Variatie=Plank, gestrekte armen": 3.6}, "catcow": {"Variatie=Volledig": 6, "Variatie=Alleen het bekken kantelen": 6}, "openbook": {"Variatie=Arm gestrekt": 4.8, "Variatie=Hand achter het hoofd": 4.8}, "passthrough": {"Houding=Op de hielen|Grip=Smalle grip": 7.2, "Houding=Op de hielen|Grip=Brede grip": 7.2, "Houding=Staand|Grip=Smalle grip": 7.2, "Houding=Staand|Grip=Brede grip": 7.2}, "hip9090": {"Armen=Handen achter": 12.8, "Armen=Handen vrij": 12.8}, "vouw": {"Variatie=Heupen 90°": 4, "Variatie=Handen naar de enkels": 4, "Variatie=Handen op de grond": 4, "Variatie=Voeten breed": 4}, "jefferson": {"Gewicht=Zonder gewicht": 10, "Gewicht=Met gewicht (optie)": 10}, "childspose": {"Variatie=Recht vooruit": 9.6, "Variatie=Naar links": 4.8, "Variatie=Naar rechts": 4.8}, "heupbuiger": {"Variatie=Arm omhoog": 5, "Variatie=Met zijbuiging": 5, "Variatie=Met rotatie": 5}, "frog": {"Variatie=Op de onderarmen": 5, "Variatie=Op de handen": 5, "Variatie=Halve frog": 5}, "enkel": {"Variatie=Op de hielen": 4.4, "Variatie=Knieën omhoog": 4.4, "Variatie=Zittend met gestrekte benen": 4.4, "Variatie=Op de knieën, tenen gestrekt": 4.4}, "deurpost": {"Armstand=Y-vorm": 6, "Armstand=90-90": 6}}}
 </script>
 <script type="application/json" id="session">
 null
@@ -2288,8 +2317,8 @@ function seq(steps,u){
   return [e,c];
 }
 const STEPS={
-  dyn:{klassiek:[[1,1,0],[.5,1,0],[1,0,0],[.2,0,0]],
-       crunch:[[1.4,1,0],[.5,1,0],[1.7,1,1],[.5,1,1],[1.7,1,0],[.4,1,0],[1.4,0,0],[.4,0,0]]},
+  dyn:{klassiek:[[1.2,1,0],[.6,1,0],[1.2,0,0],[.24,0,0]],
+       crunch:[[1.68,1,0],[.6,1,0],[2.04,1,1],[.6,1,1],[2.04,1,0],[.48,1,0],[1.68,0,0],[.48,0,0]]},
   iso:{klassiek:[[1.2,1,0],[7,1,0],[1.2,0,0],[.6,0,0]],
        crunch:[[1,1,0],[.9,1,1],[7,1,1],[.9,1,0],[1,0,0],[.5,0,0]]}
 };
@@ -3394,13 +3423,13 @@ const EX={
 };
 /* shoulder S on a curve whose lower half (lumbar) lies along the floor */
 function torsoCurve(rise){
-  const H=P(0,-25),C=P(78,-25);
+  const H=P(0,-25),C=P(104,-25);  /* control point near the shoulders: the lower back stays flat on the floor longer */
   const len=Sx=>{let L=0;const S=P(Sx,-25-rise);let p=S;for(let i=1;i<=40;i++){const t=i/40,q=P((1-t)*(1-t)*S.x+2*(1-t)*t*C.x+t*t*H.x,(1-t)*(1-t)*S.y+2*(1-t)*t*C.y+t*t*H.y);L+=Math.hypot(q.x-p.x,q.y-p.y);p=q;}return L};
   let lo=80,hi=200;for(let i=0;i<40;i++){const m=(lo+hi)/2;if(len(m)<155)lo=m;else hi=m;}
   return {H,C,S:P((lo+hi)/2,-25-rise)};
 }
 function pose(v,u,kick){
-  const {H,C,S}=torsoCurve(30*u);
+  const {H,C,S}=torsoCurve(25*u);
   const tS=angOf(sub(S,C));                  /* torso direction at the shoulder */
   const angH=tS-4*DEG,hd=along(S,angH,56);
   const legAng=b=>Math.PI+b*DEG;
@@ -4236,7 +4265,7 @@ const EX={key:'row',VW:640,VH:500,variants:['twee','een','face'],reduceT:1,
     {kind:'back',cx:520,cy:458,sc:.62,ly:488,matW:240,yaw:variant==='face'?YAW:0,label:variant==='face'?'SCHUIN ACHTERAANZICHT':undefined}];},
   state(mode,variant,time){
     if(mode==='iso'){const t=isoT(time);return{t,glow:.85+.15*Math.sin(time*Math.PI*2*6.5)};}
-    const t=cycle(time,1.2,.6,1.5,.4);return{t,glow:.3+.7*t};
+    const t=cycle(time,.8,.4,1,.27);return{t,glow:.3+.7*t};
   },
   scene(st,variant){
     const f=standing({Hc:V(0,282,-6),lean:4*DEG,feet:30}),t=st.t,g=st.glow;
@@ -10535,7 +10564,7 @@ const breath=T=>Math.sin(T*Math.PI*2/4);
 const PAGE={key:'hip9090-state',defMode:'dyn',
   groups:[{id:'v',label:'Armen',opts:[['back','Handen achter'],['free','Handen vrij']]}]};
 VX=0;VY=0;VW=640;VH=440;
-PAGE.period=st=>st.mode==='iso'?8:6.4;
+PAGE.period=st=>st.mode==='iso'?8:12.8;
 PAGE.still=st=>st.mode==='iso'?3:0;
 const HIP_Y=-30;
 /* 90-90-stand (knieën naar rechts): beide dijen 45° schuin naar voren, 90° ten opzichte van elkaar.
@@ -10560,8 +10589,8 @@ function legKey(side,u){
 }
 function motionU(st,T){
   if(st.mode==='iso')return 0;
-  const x=T%6.4;
-  return x<.8?0:x<3.2?(x-.8)/2.4:x<4?1:1-(x-4)/2.4;
+  const x=T%12.8;
+  return x<1.6?0:x<6.4?(x-1.6)/4.8:x<8?1:1-(x-8)/4.8;
 }
 function pose(st,T){
   const u=motionU(st,T),M={u};
@@ -14152,19 +14181,37 @@ const h=(tag,attrs={},...kids)=>{const e=document.createElement(tag);
 const CAT=JSON.parse($('#catalog').textContent);
 const byId={};CAT.exercises.forEach(e=>byId[e.id]=e);
 const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const lsGet=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
+
+/* ---------- tempo van de animaties ----------
+   CAT.cyc[id][sleutel] = duur van één herhaling in seconden, gemeten uit de animatiepagina zelf
+   (groups.py). Sleutel = gekozen variaties zonder Isometrisch/Dynamisch. */
+const isModeText=t=>/^(isometrisch|dynamisch)$/i.test(t);
+const cycKey=pairs=>(pairs||[]).filter(([,t])=>!isModeText(t)).map(p=>p.join('=')).join('|');
+function cycOf(it){
+  const c=(CAT.cyc||{})[it.ex];if(!c)return 3;
+  const v=c[cycKey(it.opts)];if(v)return v;
+  const any=Object.values(c);return any.length?any[0]:3;
+}
 
 /* ---------- animatie: de originele oefenpagina (artifact), ongewijzigd, in een iframe ----------
-   De app leest de knoppen van de pagina zelf uit en bedient ze. Zo werkt elke animatie precies
-   zoals gemaakt met de skill fitness-oefening-animatie, hoe de pagina intern ook is opgebouwd. */
+   De app leest de knoppen van de pagina zelf uit en bedient ze, ook de knop Pauze/Afspelen.
+   Zo werkt elke animatie precies zoals gemaakt met de skill fitness-oefening-animatie. */
 const EMBED_CSS='<style id="lt-embed">html,body{margin:0!important;padding:0!important;background:transparent!important;overflow:hidden!important}'
  +'main{display:block!important;max-width:none!important;margin:0!important;padding:0!important}main>header,.bar,.legend{display:none!important}'
  +'.stage{border:0!important;border-radius:0!important;margin:0!important}canvas{display:block!important;width:100%!important;height:auto!important}</style>';
+/* alleen voor het meten van het tempo (groups.py): tijd van de pagina stap voor stap */
+const MANUAL_CLOCK='<script>(function(){var vt=0,q=[];performance.now=function(){return vt};'
+ +'window.requestAnimationFrame=function(cb){q.push(cb);return q.length};'
+ +'window.__step=function(dt){vt+=dt*1000;var c=q;q=[];for(var i=0;i<c.length;i++)c[i](vt);};})();<\/script>';
 function pageSrc(id){return $(`script[data-ex="${id}"]`).textContent.replace(/<\\\/script/gi,'</'+'script');}
-function Anim(box,exId,pairs,onReady){
+function Anim(box,exId,pairs,onReady,o={}){
   const ex=byId[exId];
   const fr=h('iframe',{class:'anim',title:'Animatie '+ex.naam,style:`aspect-ratio:${ex.w}/${ex.h}`,tabindex:'-1'});
   let doc=null,win=null;
   const a={ex,
+    get win(){return win;},get doc(){return doc;},
     /* knopgroepen van de pagina: [{label,hidden,isMode,opts:[{text,pressed,hidden,btn}]}] */
     groups(){
       if(!doc)return [];
@@ -14175,7 +14222,7 @@ function Anim(box,exId,pairs,onReady){
         if(!map.has(g)){const o={label:g.getAttribute('aria-label')||'Variatie',hidden:!!g.closest('[hidden]'),opts:[]};map.set(g,o);out.push(o);}
         map.get(g).opts.push({text:b.textContent.trim(),pressed:b.getAttribute('aria-pressed')==='true',hidden:!!b.hidden,btn:b});
       }
-      out.forEach(g=>{g.isMode=g.opts.some(o=>/^(isometrisch|dynamisch)$/i.test(o.text));});
+      out.forEach(g=>{g.isMode=g.opts.some(o=>isModeText(o.text));});
       return out;
     },
     select(label,text){const g=a.groups().find(g=>g.label===label&&!g.hidden);if(!g)return false;
@@ -14185,6 +14232,11 @@ function Anim(box,exId,pairs,onReady){
       return p&&/^iso/i.test(p.text)?'iso':'dyn';},
     labels(){return a.groups().filter(g=>!g.hidden&&g.opts.filter(o=>!o.hidden).length>1).map(g=>(g.opts.find(o=>o.pressed)||{}).text).filter(Boolean);},
     legend(){const l=doc&&doc.querySelector('.legend');if(!l)return ex.legend||'';const c=l.cloneNode(true);c.querySelectorAll('[hidden]').forEach(x=>x.remove());return c.innerHTML;},
+    cyc(){return cycOf({ex:exId,opts:a.pairs()});},
+    /* afspelen en stilzetten via de eigen knop van de pagina (aria-pressed = gepauzeerd) */
+    playing(){const b=doc&&doc.getElementById('play');return !b||b.getAttribute('aria-pressed')!=='true';},
+    play(on=true){const b=doc&&doc.getElementById('play');if(b&&a.playing()!==on)b.click();},
+    pause(){a.play(false);},
     /* ademritme (uit de catalogus): fasen van de gekozen methode */
     ritme(){if(!ex.ritme)return null;for(const [,t] of a.pairs())if(ex.ritme[t])return ex.ritme[t];return Object.values(ex.ritme)[0];},
     period(){const r=a.ritme();return r?r.reduce((s,p)=>s+p[1],0):0;},
@@ -14197,109 +14249,208 @@ function Anim(box,exId,pairs,onReady){
   a.ready=new Promise(res=>{
     fr.addEventListener('load',()=>{
       try{win=fr.contentWindow;doc=fr.contentDocument;}catch(e){win=doc=null;}
+      if(doc&&(typeof o.paused==='function'?o.paused():o.paused))a.pause();
       if(doc&&Array.isArray(pairs))for(let k=0;k<2;k++)pairs.forEach(([l,t])=>a.select(l,t));
       res(a);onReady&&onReady(a);
     },{once:true});
   });
-  fr.srcdoc=pageSrc(exId).replace(/<link[^>]*fonts\.(googleapis|gstatic)[^>]*>/gi,'').replace(/<\/body>/i,EMBED_CSS+'</body>');
+  let src=pageSrc(exId).replace(/<link[^>]*fonts\.(googleapis|gstatic)[^>]*>/gi,'').replace(/<\/body>/i,EMBED_CSS+'</body>');
+  if(o.manual)src=src.replace(/<head>/i,'<head>'+MANUAL_CLOCK);
+  fr.srcdoc=src;
   box.append(fr);
   return a;
 }
 
-/* ---------- voorschrift van een onderdeel in de training ---------- */
+/* ---------- voorschrift en tijdsduur van een onderdeel ---------- */
+const PREP=5,SWITCH=45;  /* 5 s aftellen; ca. 45 s wisselen tussen oefeningen */
 const timed=it=>it.mode==='iso'||(byId[it.ex]&&byId[it.ex].tijd);
 const workSec=it=>it.mode==='iso'?it.hold:it.work;
 function fmtDur(s){s=Math.round(s);return s>=60?(Math.floor(s/60)+' min'+(s%60?' '+s%60+' s':'')):s+' s';}
+function fmtClock(s){s=Math.max(0,Math.ceil(s-1e-6));return s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):String(s);}
 function presc(it){
   const ex=byId[it.ex];
   if(ex&&ex.ritme)return `${it.rounds} rondes · ca. ${fmtDur(it.rounds*(it.period||20))}`;
-  if(it.mode==='iso')return `${it.sets} × ${it.hold} s vasthouden · ${it.rest} s rust`;
-  if(ex&&ex.tijd)return `${it.sets} × ${it.work} s · ${it.rest} s rust`;
+  if(it.mode==='iso')return `${it.sets} × ${fmtDur(it.hold)} vasthouden · ${it.rest} s rust`;
+  if(ex&&ex.tijd)return `${it.sets} × ${fmtDur(it.work)} · ${it.rest} s rust`;
   return `${it.sets} × ${it.reps} herhalingen · ${it.rest} s rust`;
 }
-function itemDur(it){ /* schatting in seconden */
+function itemDur(it){ /* schatting in seconden, zonder het wisselen */
   const ex=byId[it.ex];
-  if(ex&&ex.ritme)return it.rounds*(it.period||20)+5;
-  const work=timed(it)?workSec(it):it.reps*2.5;
-  return 5+it.sets*work+(it.sets-1)*it.rest;
+  if(ex&&ex.ritme)return PREP+it.rounds*(it.period||20);
+  const work=timed(it)?workSec(it):it.reps*cycOf(it);
+  return PREP+it.sets*work+(it.sets-1)*it.rest;
 }
+function totalDur(items){return items.reduce((a,it)=>a+itemDur(it),0)+SWITCH*Math.max(0,items.length-1);}
 function fmtMin(s){const m=Math.round(s/60);return m<1?'< 1 min':m+' min';}
 
-/* ---------- geluid: piepjes en gong (Web Audio, geen bestanden nodig) ---------- */
-const Sound={ac:null,on:true,
-  unlock(){try{this.ac=this.ac||new (window.AudioContext||window.webkitAudioContext)();if(this.ac.state==='suspended')this.ac.resume();
-    const o=this.ac.createOscillator(),g=this.ac.createGain();g.gain.value=0;o.connect(g);g.connect(this.ac.destination);o.start();o.stop(this.ac.currentTime+.01);}catch(e){}},
-  beep(f=880,d=.12,vol=.35){if(!this.on||!this.ac)return;const t=this.ac.currentTime,o=this.ac.createOscillator(),g=this.ac.createGain();
-    o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.01);g.gain.setValueAtTime(vol,t+d-.03);g.gain.linearRampToValueAtTime(0,t+d);
-    o.connect(g);g.connect(this.ac.destination);o.start(t);o.stop(t+d+.02);},
+/* ---------- geluid: piepjes en gong (Web Audio, geen bestanden nodig) ----------
+   Eén hoofdvolume (regelaar bij de bel) met een compressor, zodat het hard kan zonder te kraken.
+   iOS zet het geluid soms stil (scherm uit, ander geluid, app-wissel): bij elke tik en bij
+   terugkeer naar de app wordt de audio weer gestart, of zo nodig opnieuw aangemaakt. */
+const Sound={ac:null,master:null,vol:lsGet('lt-vol',.8),bad:false,
+  get on(){return this.vol>0;},
+  setVol(v){this.vol=Math.max(0,Math.min(1,v));lsSet('lt-vol',this.vol);if(this.master)this.master.gain.value=this.vol*1.6;},
+  ensure(){
+    try{
+      if(!this.ac||this.ac.state==='closed'||this.bad){
+        try{this.ac&&this.ac.state!=='closed'&&this.ac.close();}catch(e){}
+        const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+        this.ac=new AC();this.bad=false;
+        const comp=this.ac.createDynamicsCompressor();comp.threshold.value=-12;comp.knee.value=6;comp.ratio.value=8;comp.attack.value=.003;comp.release.value=.2;
+        this.master=this.ac.createGain();this.master.gain.value=this.vol*1.6;this.master.connect(comp);comp.connect(this.ac.destination);
+      }
+      if(this.ac.state!=='running'){const ac=this.ac;const p=ac.resume();
+        if(p&&p.then)p.then(()=>{if(ac.state!=='running')this.bad=true;}).catch(()=>{this.bad=true;});}
+    }catch(e){this.bad=true;}
+  },
+  unlock(){this.ensure();try{const ac=this.ac,o=ac.createOscillator(),g=ac.createGain();g.gain.value=0;o.connect(g);g.connect(this.master);o.start();o.stop(ac.currentTime+.02);}catch(e){}},
+  ready(){if(!this.on)return false;if(!this.ac||this.ac.state!=='running')this.ensure();return !!(this.ac&&this.master);},
+  beep(f=880,d=.12,vol=.5){if(!this.ready())return;const ac=this.ac,t=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();
+    o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.01);g.gain.setValueAtTime(vol,t+d-.03);g.gain.linearRampToValueAtTime(0,t+d);
+    o.connect(g);g.connect(this.master);o.start(t);o.stop(t+d+.02);},
   tick(){this.beep(880,.12);},
-  go(){this.beep(1320,.45,.4);},
-  rest(){this.beep(660,.45,.4);},
+  rep(){this.beep(1175,.07,.3);},
+  go(){this.beep(1320,.45,.55);},
+  rest(){this.beep(660,.45,.55);},
   done(){this.beep(1320,.15);setTimeout(()=>this.beep(1320,.15),220);setTimeout(()=>this.beep(1760,.4),440);},
-  gong(f){if(!this.on||!this.ac)return;const ac=this.ac,t=ac.currentTime,out=ac.createGain(),lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=520;out.gain.value=.7;out.connect(lp);lp.connect(ac.destination);
-    for(const [r,v,d] of [[1,.34,1.1],[1.48,.05,.55],[2.02,.025,.35]]){const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f*r;
+  fanfare(){[[1047,0],[1319,.16],[1568,.32],[2093,.5]].forEach(([f,t])=>setTimeout(()=>this.beep(f,t===.5?.6:.18,.5),t*1000));},
+  /* gong: zelfde klank bij ademwissel en bij elke 10 s vasthouden; boventonen voor telefoonspeakers */
+  gong(f=220){if(!this.ready())return;const ac=this.ac,t=ac.currentTime,out=ac.createGain(),lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2400;out.gain.value=1;out.connect(lp);lp.connect(this.master);
+    for(const [r,v,d] of [[1,.45,1.4],[2.01,.3,1.0],[2.98,.16,.7],[4.07,.08,.45]]){const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f*r;
       g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(out);o.start(t);o.stop(t+d+.05);}}
 };
-let wake=null;
-async function keepAwake(on){try{if(on&&!wake&&navigator.wakeLock){wake=await navigator.wakeLock.request('screen');wake.addEventListener('release',()=>wake=null);}
-  else if(!on&&wake){await wake.release();wake=null;}}catch(e){}}
+try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){} /* iOS 17+: ook geluid met de stilknop aan */
+
+/* ---------- scherm aan houden zolang de app open staat ----------
+   Wake Lock waar het kan; op iPhone daarnaast een onzichtbaar stil filmpje in een lus. */
+const NOSLEEP='data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAXBbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAB9AAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAlp0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAB9AAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAABAAAAAQAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAfQAAAAAAABAAAAAAHSbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAABAAAAAgABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABfW1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAT1zdGJsAAAAuXN0c2QAAAAAAAAAAQAAAKlhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAABAAEABIAAAASAAAAAAAAAABFUxhdmM2MC4zMS4xMDIgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAAL2F2Y0MBQsAK/+EAFmdCwArZHsBEAAADAAQAAAMACDxImSABAAZoy4BlLIAAAAAQcGFzcAAAAAEAAAABAAAAFGJ0cnQAAAAAAAAKNAAACjQAAAAYc3R0cwAAAAAAAAABAAAAAgAAQAAAAAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAcc3RzegAAAAAAAAAAAAAAAgAAAoMAAAAKAAAAGHN0Y28AAAAAAAAAAgAABgYAAAipAAACkXRyYWsAAABcdGtoZAAAAAMAAAAAAAAAAAAAAAIAAAAAAAAH0AAAAAAAAAAAAAAAAQEAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAACRlZHRzAAAAHGVsc3QAAAAAAAAAAQAAB9AAAAQAAAEAAAAAAgltZGlhAAAAIG1kaGQAAAAAAAAAAAAAAAAAAB9AAABCgFXEAAAAAAAtaGRscgAAAAAAAAAAc291bgAAAAAAAAAAAAAAAFNvdW5kSGFuZGxlcgAAAAG0bWluZgAAABBzbWhkAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAF4c3RibAAAAH5zdHNkAAAAAAAAAAEAAABubXA0YQAAAAAAAAABAAAAAAAAAAAAAQAQAAAAAB9AAAAAAAA2ZXNkcwAAAAADgICAJQACAASAgIAXQBUAAAAAAB9AAAABPwWAgIAFFYhW5QAGgICAAQIAAAAUYnRydAAAAAAAAB9AAAABPwAAACBzdHRzAAAAAAAAAAIAAAAQAAAEAAAAAAEAAAKAAAAAKHN0c2MAAAAAAAAAAgAAAAEAAAABAAAAAQAAAAIAAAAIAAAAAQAAAFhzdHN6AAAAAAAAAAAAAAARAAAAFQAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAcc3RjbwAAAAAAAAADAAAF8QAACIkAAAizAAAAGnNncGQBAAAAcm9sbAAAAAIAAAAB//8AAAAcc2JncAAAAAByb2xsAAAAAQAAABEAAAABAAAAYnVkdGEAAABabWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAtaWxzdAAAACWpdG9vAAAAHWRhdGEAAAABAAAAAExhdmY2MC4xNi4xMDAAAAAIZnJlZQAAAuptZGF03gIATGF2YzYwLjMxLjEwMgACMEAOAAACcAYF//9s3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NCByMzEwOCAzMWUxOWY5IC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAyMyAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTAgcmVmPTMgZGVibG9jaz0xOjA6MCBhbmFseXNlPTB4MToweDExMSBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MSA4eDhkY3Q9MCBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiB0aHJlYWRzPTEgbG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFkcz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0wIHdlaWdodHA9MCBrZXlpbnQ9MjUwIGtleWludF9taW49MSBzY2VuZWN1dD00MCBpbnRyYV9yZWZyZXNoPTAgcmNfbG9va2FoZWFkPTQwIHJjPWNyZiBtYnRyZWU9MSBjcmY9NTEuMCBxY29tcD0wLjYwIHFwbWluPTAgcXBtYXg9NjkgcXBzdGVwPTQgaXBfcmF0aW89MS40MCBhcT0xOjEuMDAAgAAAAAtliIQFvJigACFPgAEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHAAAABkGaOAr6gAEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAH';
+const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const Awake={lock:null,video:null,
+  async acquire(){
+    if(document.visibilityState!=='visible')return;
+    if('wakeLock' in navigator&&!this.lock){
+      try{this.lock=await navigator.wakeLock.request('screen');this.lock.addEventListener('release',()=>{this.lock=null;});}catch(e){this.lock=null;}
+    }
+    if(isIOS||!this.lock)this.videoOn();
+  },
+  videoOn(){
+    try{
+      if(!this.video){const v=document.createElement('video');v.setAttribute('playsinline','');v.setAttribute('muted','');v.muted=true;v.loop=true;
+        v.setAttribute('aria-hidden','true');v.style.cssText='position:fixed;left:0;bottom:0;width:1px;height:1px;opacity:.01;pointer-events:none';
+        v.src=NOSLEEP;document.body.append(v);this.video=v;}
+      if(this.video.paused){const p=this.video.play();if(p&&p.catch)p.catch(()=>{});}
+    }catch(e){}
+  }
+};
+const wakeUp=()=>{Sound.ensure();Awake.acquire();};
+addEventListener('pointerdown',wakeUp,{capture:true,passive:true});
+addEventListener('touchend',wakeUp,{capture:true,passive:true});
+addEventListener('keydown',wakeUp,{capture:true});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){Sound.ensure();Awake.acquire();}});
+addEventListener('pageshow',()=>{Sound.ensure();Awake.acquire();});
 
 /* ---------- timer voor één onderdeel ----------
-   iso:  klaarmaken 5 s → vasthouden → rust → … (sets)
-   dyn:  set uitvoeren (knop "Set klaar") → rust → …
+   iso:   klaarmaken 5 s → vasthouden (gong per 10 s) → rust → …
+   dyn:   klaarmaken 5 s → animatie start en telt de herhalingen mee → rust (animatie stil) → …
+   tijd:  klaarmaken 5 s → springen op tijd → rust → …
    ritme: klaarmaken 5 s → ademritme gedurende rondes × periode, gong bij elke fase */
-const PREP=5;
-function Timer(it,anim,ui){
-  const ex=byId[it.ex];
-  const s={phase:'ready',set:1,end:0,start:0,left:0,paused:false,lastSec:null,lastPh:-1};
+function Timer(it,A,ui){
+  const ex=byId[it.ex],reps=!ex.ritme&&!timed(it);
+  const anim=()=>A.get();
+  const s={phase:'ready',set:1,end:0,start:0,left:0,paused:false,lastSec:null,lastPh:-1,lastRep:0,lastGong:0,cyc:3,aligned:true};
   const now=()=>performance.now()/1000;
-  function enter(ph,dur){s.phase=ph;s.start=now();s.end=dur!=null?s.start+dur:0;s.lastSec=null;s.lastPh=-1;
-    if(ph==='hold'||ph==='work'||ph==='breath')Sound.go();else if(ph==='rest')Sound.rest();
-    if(ph!=='breath'&&ex.ritme)anim.clearT();
-    ui();}
-  function next(){
-    if(s.phase==='prep'){enter(ex.ritme?'breath':timed(it)?'hold':'work',ex.ritme?it.rounds*anim.period():timed(it)?workSec(it):null);return;}
-    if(s.phase==='breath'){finish();return;}
-    if(s.phase==='hold'||s.phase==='work'){if(s.set>=it.sets){finish();return;}enter('rest',it.rest);return;}
-    if(s.phase==='rest'){s.set++;enter(timed(it)?'hold':'work',timed(it)?workSec(it):null);return;}
+  const workDur=()=>ex.ritme?it.rounds*anim().period():reps?it.reps*s.cyc:workSec(it);
+  function animFor(ph){
+    const a=anim();if(!a)return;
+    if(ex.ritme){if(ph!=='breath')a.clearT();return;}
+    if(it.mode==='iso'){a.play(true);return;}
+    a.play(ph==='work'&&!s.paused);
   }
-  function finish(){s.phase='done';Sound.done();if(ex.ritme)anim.clearT();keepAwake(false);ui();}
-  const t={s,
-    start(){Sound.unlock();keepAwake(true);
-      if(s.phase==='ready'||s.phase==='done'){s.set=1;if(!ex.ritme&&!timed(it))enter('work',null);else enter('prep',PREP);}},
-    pause(){if(s.paused||!s.end&&s.phase!=='work')return;s.paused=true;s.left=s.end?s.end-now():0;s.frozen=now()-s.start;s.pausedAt=now();ui();},
-    resume(){if(!s.paused)return;const d=now()-s.pausedAt;s.start+=d;if(s.end)s.end+=d;s.paused=false;ui();},
-    skip(){if(s.phase==='ready'||s.phase==='done')return;s.paused=false;next();},
-    setDone(){if(s.phase==='work')next();},
-    reset(){s.phase='ready';s.set=1;s.paused=false;if(ex.ritme)anim.clearT();keepAwake(false);ui();},
+  function enter(ph,dur){s.phase=ph;s.start=now();s.end=dur!=null?s.start+dur:0;s.lastSec=null;s.lastPh=-1;s.lastRep=0;s.lastGong=0;
+    if(ph==='work'||ph==='breath')Sound.go();else if(ph==='rest')Sound.rest();
+    animFor(ph);ui();}
+  function next(early){
+    if(s.phase==='prep'){if(reps)s.cyc=anim().cyc();enter(ex.ritme?'breath':'work',workDur());return;}
+    if(s.phase==='breath'){finish();return;}
+    if(s.phase==='work'){
+      if(reps&&early){s.aligned=false;}
+      if(s.set>=it.sets){finish();return;}
+      enter('rest',it.rest);
+      /* set eerder gestopt: animatie terug naar de beginstand voor de volgende set */
+      if(reps&&!s.aligned){A.reload();s.aligned=true;}
+      return;}
+    if(s.phase==='rest'){s.set++;enter('work',workDur());return;}
+  }
+  function finish(){s.phase='done';Sound.done();const a=anim();if(a){if(ex.ritme)a.clearT();else if(it.mode!=='iso')a.pause();}
+    if(reps&&!s.aligned){A.reload();s.aligned=true;}ui();}
+  const t={s,reps,
+    start(){Sound.unlock();
+      if(s.phase==='ready'||s.phase==='done'){
+        if(s.phase==='done'&&reps){A.reload();}
+        s.set=1;enter('prep',PREP);}},
+    pause(){if(s.paused||!s.end)return;s.paused=true;s.left=s.end-now();s.frozen=now()-s.start;s.pausedAt=now();
+      if(reps||(ex.tijd&&s.phase==='work'))anim().pause();ui();},
+    resume(){if(!s.paused)return;const d=now()-s.pausedAt;s.start+=d;if(s.end)s.end+=d;s.paused=false;animFor(s.phase);ui();},
+    skip(){if(s.phase==='ready'||s.phase==='done')return;s.paused=false;
+      if(s.phase==='work'&&reps)s.aligned=false;next(true);},
+    reset(){s.phase='ready';s.set=1;s.paused=false;const a=anim();if(a){if(ex.ritme)a.clearT();else if(it.mode!=='iso')a.pause();}
+      if(reps&&s.end&&!s.aligned)A.reload();s.aligned=true;ui();},
     remaining(){if(!s.end)return null;return Math.max(0,(s.paused?s.left:s.end-now()));},
     elapsed(){return s.paused?s.frozen:now()-s.start;},
+    count(){return reps?Math.min(it.reps,Math.floor(t.elapsed()/s.cyc+1e-6)):0;},
     tick(){
       if(s.paused||s.phase==='ready'||s.phase==='done')return;
-      if(s.phase==='breath'){const p=anim.phase(t.elapsed()%anim.period());
+      if(s.phase==='breath'){const p=anim().phase(t.elapsed()%anim().period());
         if(p&&p.i!==s.lastPh){if(s.lastPh!==-1)Sound.gong({in:294,hold:220,out:165}[p.kind]||220);s.lastPh=p.i;}}
+      if(s.phase==='work'&&reps){const n=t.count();if(n>s.lastRep){s.lastRep=n;if(n<it.reps)Sound.rep();}}
+      if(s.phase==='work'&&it.mode==='iso'){const k=Math.floor(t.elapsed()/10+1e-6);if(k>s.lastGong){s.lastGong=k;if(t.remaining()>.8)Sound.gong(220);}}
       if(!s.end)return;
       const r=s.end-now(),sec=Math.ceil(r);
       if(r<=0){next();return;}
-      if(sec<=3&&sec!==s.lastSec&&s.phase!=='breath'){s.lastSec=sec;Sound.tick();}
-      else if(s.phase==='breath'&&sec<=3&&sec!==s.lastSec){s.lastSec=sec;}
+      const ticks=s.phase==='prep'||s.phase==='rest'||(s.phase==='work'&&!reps);
+      if(ticks&&sec<=3&&sec!==s.lastSec){s.lastSec=sec;Sound.tick();}
     }
   };
   return t;
 }
 
+/* ---------- vrolijke afsluiting ---------- */
+function confetti(box){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const cv=h('canvas',{class:'confetti','aria-hidden':'true'});box.append(cv);
+  const ctx=cv.getContext('2d'),dpr=Math.min(2,devicePixelRatio||1);
+  const W=cv.width=innerWidth*dpr,H=cv.height=innerHeight*dpr;
+  const cols=[tok('--accent'),tok('--muscle'),tok('--band'),'#F2B33D',tok('--ink')];
+  const P=Array.from({length:160},(_,i)=>({x:W*(.2+.6*Math.random()),y:H*(.35+.1*Math.random()),vx:(Math.random()-.5)*16*dpr,vy:(-10-Math.random()*14)*dpr,
+    r:(4+Math.random()*5)*dpr,a:Math.random()*6,va:(Math.random()-.5)*.4,c:cols[i%cols.length]}));
+  const t0=performance.now();
+  (function f(t){const k=(t-t0)/1000;ctx.clearRect(0,0,W,H);
+    for(const p of P){p.vy+=.45*dpr;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.a+=p.va;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a);ctx.globalAlpha=Math.max(0,1-k/4.5);ctx.fillStyle=p.c;ctx.fillRect(-p.r,-p.r/2,p.r*2,p.r);ctx.restore();}
+    if(k<4.5&&cv.isConnected)requestAnimationFrame(f);else cv.remove();})(t0);
+}
+
 /* ---------- speler: één oefening per scherm, pijltjes links/rechts ---------- */
 function Player(root,session,opts={}){
   const items=session.items;
-  let idx=-1,anim=null,timer=null,iv=0,raf=0;
+  let idx=-1,anim=null,timer=null,iv=0,raf=0,t0=null,volOpen=false;
   root.innerHTML='';
   const wrap=h('div',{class:'player'});root.append(wrap);
-  const top=h('div',{class:'ptop'}),main=h('main'),nav=h('div',{class:'pnav'});
-  wrap.append(top,main);
+  const top=h('div',{class:'ptop'}),volBar=h('div',{class:'volbar',hidden:true}),main=h('main'),nav=h('div',{class:'pnav'});
+  wrap.append(top,volBar,main);
   const prev=h('button',{class:'arrow',type:'button','aria-label':'Vorige oefening',onclick:()=>go(idx-1)},'‹ Terug');
   const nxt=h('button',{class:'arrow',type:'button','aria-label':'Volgende oefening',onclick:()=>{Sound.unlock();go(idx+1);}},'Volgende ›');
   const count=h('div',{class:'count'});
   nav.append(prev,count,nxt);
+  /* volume: regelaar onder de kop, open via de bel */
+  const vol=h('input',{type:'range',min:0,max:100,step:5,value:Math.round(Sound.vol*100),'aria-label':'Volume'});
+  const volPct=h('span',{class:'pct'});
+  const setVolUI=()=>{volPct.textContent=Math.round(Sound.vol*100)+'%';snd.textContent=Sound.on?'🔔':'🔕';snd.setAttribute('aria-pressed',String(volOpen));};
+  vol.addEventListener('input',()=>{Sound.setVol(vol.value/100);setVolUI();});
+  vol.addEventListener('change',()=>{Sound.unlock();Sound.tick();});
+  volBar.append(h('button',{type:'button',class:'ghost','aria-label':'Geluid uit',onclick:()=>{Sound.setVol(0);vol.value=0;setVolUI();}},'🔕'),
+    vol,volPct,h('button',{type:'button',onclick:()=>{Sound.unlock();if(!Sound.on){Sound.setVol(.8);vol.value=80;setVolUI();}Sound.gong(220);}},'Test'));
+  const snd=h('button',{type:'button','aria-label':'Geluid en volume',onclick:()=>{volOpen=!volOpen;volBar.hidden=!volOpen;Sound.unlock();setVolUI();}},'🔔');
   /* vegen naar links/rechts */
   let tx=null,ty=null;
   main.addEventListener('touchstart',e=>{const p=e.touches[0];tx=p.clientX;ty=p.clientY;},{passive:true});
@@ -14308,26 +14459,31 @@ function Player(root,session,opts={}){
   document.addEventListener('keydown',onKey);
   function onKey(e){if(e.target.closest&&e.target.closest('input,textarea,select'))return;
     if(e.key==='ArrowRight')go(idx+1);else if(e.key==='ArrowLeft')go(idx-1);}
-  function cleanup(){if(anim)anim.destroy();anim=null;clearInterval(iv);cancelAnimationFrame(raf);keepAwake(false);}
+  function cleanup(){if(anim)anim.destroy();anim=null;clearInterval(iv);cancelAnimationFrame(raf);}
+  function close(fn){cleanup();document.removeEventListener('keydown',onKey);fn();}
   function header(){
     top.innerHTML='';
-    if(opts.onClose)top.append(h('button',{type:'button',class:'ghost','aria-label':'Sluiten',onclick:()=>{cleanup();document.removeEventListener('keydown',onKey);opts.onClose();}},'✕'));
+    if(opts.onClose)top.append(h('button',{type:'button',class:'ghost','aria-label':'Sluiten',onclick:()=>close(opts.onClose)},'✕'));
     const dots=h('div',{class:'dots'},items.map((_,i)=>h('i',{class:i===idx?'on':i<idx?'done':''})));
-    top.append(h('div',{class:'grow'},h('div',{class:'title'},session.name||'Landtraining'),dots));
-    const snd=h('button',{type:'button','aria-pressed':String(Sound.on),onclick:()=>{Sound.on=!Sound.on;snd.setAttribute('aria-pressed',String(Sound.on));snd.textContent=Sound.on?'🔔':'🔕';if(Sound.on)Sound.unlock();}},Sound.on?'🔔':'🔕');
-    snd.setAttribute('aria-label','Geluid');
-    top.append(snd);
+    top.append(h('div',{class:'grow'},h('div',{class:'title'},session.name||'Landtraining'),dots),snd);
+    setVolUI();
   }
   function go(i){
-    if(i<-1||i>=items.length)return;
-    cleanup();idx=i;header();main.innerHTML='';main.scrollTop=0;
-    prev.disabled=idx<=-1;nxt.disabled=idx>=items.length-1;
-    count.textContent=idx<0?`0 / ${items.length}`:`${idx+1} / ${items.length}`;
+    if(i<-1||i>items.length)return;
+    cleanup();idx=i;header();main.innerHTML='';main.scrollTop=0;scrollTo(0,0);
+    prev.disabled=idx<=-1;nxt.disabled=idx>=items.length;
+    nxt.textContent=idx===items.length-1?'Afronden ›':'Volgende ›';
+    count.textContent=idx<0?`0 / ${items.length}`:`${Math.min(idx+1,items.length)} / ${items.length}`;
     if(idx<0)return cover();
+    if(idx>=items.length)return finished();
     const it=items[idx],ex=byId[it.ex];
     const stage=h('div',{class:'stage'}),legend=h('div',{class:'legend'});
     const head=h('div',{},h('h2',{class:'exname'},ex.naam),h('div',{class:'muted small'},(it.labels||[]).join(' · ')));
-    anim=Anim(stage,it.ex,it.opts,a=>{legend.innerHTML=a.legend();if(ex.ritme)it.period=a.period();render();});
+    /* dynamisch: de animatie staat stil tot de set begint (na 5 s aftellen) en tijdens de rust */
+    const paused=!ex.ritme&&it.mode!=='iso'?()=>!(timer&&timer.s.phase==='work'&&!timer.s.paused):false;
+    const mk=()=>Anim(stage,it.ex,it.opts,a=>{legend.innerHTML=a.legend();if(ex.ritme)it.period=a.period();render();},{paused});
+    anim=mk();
+    const A={get:()=>anim,reload(){const old=anim;anim=mk();old.destroy();}};
     const ph=h('div',{class:'phase'}),big=h('div',{class:'big'}),sets=h('div',{class:'sets'}),btns=h('div',{class:'row'});
     const box=h('div',{class:'timer'},h('div',{class:'presc'},presc(it)),ph,big,sets,btns);
     /* één kolom op elk scherm: figuur, timer en navigatie even breed onder elkaar */
@@ -14335,48 +14491,66 @@ function Player(root,session,opts={}){
       it.note?h('div',{class:'card small'},it.note):null,
       legend,
       h('div',{class:'muted small'},ex.houding)].filter(Boolean));
-    timer=Timer(it,anim,render);
+    timer=Timer(it,A,render);
     function btn(lab,fn,cls){return h('button',{type:'button',class:cls||'',onclick:fn},lab);}
+    /* grote weergave: tijd als 0:45 of 1:30 en aantallen als 3/15, altijd op één regel */
+    function show(main,unit){big.innerHTML='';big.append(main);if(unit)big.append(h('span',{class:'u'},unit));}
+    function showTime(sec){const s=Math.max(0,Math.ceil(sec-1e-6));show(fmtClock(s),s<60?'s':'');}
     function render(){
       const s=timer.s;btns.innerHTML='';ph.className='phase';
-      const total=ex.ritme?'':`Set ${Math.min(s.set,it.sets)} van ${it.sets}`;
-      sets.textContent=total;
-      if(s.phase==='ready'){ph.textContent='Klaar om te starten';big.textContent=ex.ritme?fmtDur(it.rounds*(anim.period()||it.period||20)):timed(it)?workSec(it)+' s':it.reps+'×';
-        btns.append(btn('Start',()=>timer.start(),'primary'));}
-      else if(s.phase==='done'){ph.textContent='Klaar!';big.textContent='✓';sets.textContent=ex.ritme?'':`${it.sets} sets gedaan`;
-        btns.append(btn('Opnieuw',()=>timer.reset()));if(idx<items.length-1)btns.append(btn('Volgende ›',()=>go(idx+1),'primary'));}
+      sets.textContent=ex.ritme?'':`Set ${Math.min(s.set,it.sets)} van ${it.sets}`;
+      if(s.phase==='ready'){ph.textContent='Klaar om te starten';
+        if(ex.ritme)showTime(it.rounds*(anim.period()||it.period||20));else if(timed(it))showTime(workSec(it));else show(String(it.reps),'×');
+        btns.append(btn('Start',()=>{if(!t0)t0=performance.now();timer.start();},'primary'));}
+      else if(s.phase==='done'){ph.textContent='Klaar!';show('✓');sets.textContent=ex.ritme?'':`${it.sets} ${it.sets===1?'set':'sets'} gedaan`;
+        btns.append(btn('Opnieuw',()=>timer.start()));}
       else{
-        const lab={prep:'Klaarmaken',hold:it.mode==='iso'?'Vasthouden':'Gaan!',work:`${it.reps} herhalingen`,rest:'Rust',breath:'Ademen'}[s.phase];
+        const lab={prep:'Klaarmaken',work:timer.reps?'Herhalingen':it.mode==='iso'?'Vasthouden':'Gaan!',rest:'Rust',breath:'Ademen'}[s.phase];
         ph.textContent=lab+(s.paused?' · pauze':'');ph.classList.add(s.phase==='rest'||s.phase==='prep'?'rest':'go');
-        if(s.phase==='work')btns.append(btn('Set klaar',()=>timer.setDone(),'primary'));
-        else btns.append(s.paused?btn('Hervat',()=>timer.resume(),'primary'):btn('Pauze',()=>timer.pause()));
-        btns.append(btn('Overslaan',()=>timer.skip()));
+        btns.append(s.paused?btn('Hervat',()=>timer.resume(),'primary'):btn('Pauze',()=>timer.pause()));
+        btns.append(btn(s.phase==='work'&&timer.reps?'Set klaar':'Overslaan',()=>timer.skip()));
       }
     }
     render();
-    iv=setInterval(()=>timer.tick(),100);
+    iv=setInterval(()=>timer.tick(),50);
     const draw=()=>{const s=timer.s;
       if(s.phase==='breath'){const per=anim.period();if(per)anim.setT(timer.elapsed()%per);}
       if(s.phase!=='ready'&&s.phase!=='done'){
-        const r=timer.remaining();
-        if(s.phase==='work')big.textContent=Math.floor(timer.elapsed())+' s';
-        else if(r!=null)big.textContent=Math.ceil(r)+(r>=60?'':' s');
-        if(r!=null&&r>=60){const m=Math.floor(Math.ceil(r)/60),ss=Math.ceil(r)%60;big.textContent=m+':'+String(ss).padStart(2,'0');}
+        if(s.phase==='work'&&timer.reps){show(String(Math.min(it.reps,timer.count()+1)),'/'+it.reps);}
+        else{const r=timer.remaining();if(r!=null)showTime(r);}
       }
       raf=requestAnimationFrame(draw);};
     raf=requestAnimationFrame(draw);
   }
   function cover(){
-    const tot=items.reduce((a,it)=>a+itemDur(it),0);
+    const tot=totalDur(items);
     main.append(h('div',{class:'cover full'},
       h('h1',{},session.name||'Landtraining'),
       h('div',{class:'muted'},[session.date?session.date.split('-').reverse().join('-'):'',session.trainer,`${items.length} oefeningen`,`ca. ${fmtMin(tot)}`].filter(Boolean).join(' · ')),
       session.note?h('div',{class:'card'},session.note):null,
       h('ol',{},items.map((it,i)=>h('li',{},h('a',{href:'#',onclick:e=>{e.preventDefault();go(i);}},byId[it.ex].naam),h('span',{class:'muted small'},' — '+[...(it.labels||[]),presc(it)].join(' · '))))),
       nav,
-      opts.onEdit?h('button',{type:'button',onclick:()=>{cleanup();document.removeEventListener('keydown',onKey);opts.onEdit();}},'Aanpassen of bewaren (voor trainers)'):null,
-      h('div',{class:'muted small'},`Tip: zet het geluid van je telefoon aan voor de piepjes. Druk op Volgende om te beginnen, of veeg naar links. · app v${session.appVersion||CAT.version}`)));
+      opts.onEdit?h('button',{type:'button',onclick:()=>close(opts.onEdit)},'Aanpassen of bewaren (voor trainers)'):null,
+      h('div',{class:'muted small'},`Tip: zet het geluid van je telefoon aan voor de piepjes en de gong (volume via de bel rechtsboven). Druk op Volgende om te beginnen, of veeg naar links. · app v${session.appVersion||CAT.version}`)));
   }
+  function finished(){
+    const sets=items.reduce((a,it)=>a+(byId[it.ex].ritme?0:it.sets||0),0);
+    const mins=t0?Math.max(1,Math.round((performance.now()-t0)/60000)):null;
+    const card=h('div',{class:'cover done-screen'},
+      h('div',{class:'trophy','aria-hidden':'true'},'🏆'),
+      h('h1',{},'Training klaar!'),
+      h('div',{class:'muted'},'Goed gedaan, sterk volgehouden.'),
+      h('div',{class:'stats'},
+        h('div',{},h('b',{},String(items.length)),h('span',{},items.length===1?'oefening':'oefeningen')),
+        h('div',{},h('b',{},String(sets)),h('span',{},'sets')),
+        mins?h('div',{},h('b',{},String(mins)),h('span',{},'minuten')):null),
+      nav,
+      h('button',{type:'button',class:'primary',onclick:()=>go(-1)},'Terug naar het overzicht'),
+      opts.onClose?h('button',{type:'button',onclick:()=>close(opts.onClose)},'Sluiten'):null);
+    main.append(card);
+    Sound.unlock();Sound.fanfare();confetti(document.body);
+  }
+  Awake.acquire();
   go(opts.start!=null?opts.start:-1);
   return {destroy(){cleanup();document.removeEventListener('keydown',onKey);}};
 }
@@ -14389,7 +14563,7 @@ function exportHTML(session){
   const blk=(type,text,attr)=>`<script type="${type}" ${attr}>\n${esc(text)}\n<\/script>\n`;
   const sess={...session,appVersion:CAT.version,exported:new Date().toISOString()};
   const title=(session.name||'Landtraining').replace(/[<&>]/g,'');
-  return `<!doctype html>\n<html lang="nl"><head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n<title>${title}</title>\n<style id="app-css">\n${$('#app-css').textContent}\n</style>\n</head><body>\n<div id="app"></div>\n`
+  return `<!doctype html>\n<html lang="nl"><head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">\n<title>${title}</title>\n<style id="app-css">\n${$('#app-css').textContent}\n</style>\n</head><body>\n<div id="app"></div>\n`
     +blk('application/json',JSON.stringify(cat),'id="catalog"')
     +blk('application/json',JSON.stringify(sess),'id="session"')
     +used.map(id=>blk('text/plain',$(`script[data-ex="${id}"]`).textContent,`data-ex="${id}"`)).join('')
@@ -14460,7 +14634,7 @@ const isWeb=/^https?:$/.test(location.protocol);
 function appURL(){return location.origin+location.pathname;}
 async function shareLink(s){return appURL()+'#t='+await encodeSession(s);}
 
-window.APP={CAT,byId,h,$,Anim,presc,timed,fmtDur,itemDur,fmtMin,Sound,Player,exportHTML,fileName,readSession,encodeSession,decodeSession,shareLink,isWeb,
+window.APP={CAT,byId,h,$,Anim,presc,timed,fmtDur,fmtClock,itemDur,totalDur,fmtMin,cycOf,cycKey,Sound,Awake,Player,exportHTML,fileName,readSession,encodeSession,decodeSession,shareLink,isWeb,lsGet,lsSet,
   async start(){
     document.documentElement.lang='nl';
     const s=JSON.parse($('#session').textContent);
@@ -14480,7 +14654,7 @@ addEventListener('hashchange',()=>{if(/[#&]t=/.test(location.hash))location.relo
 <script type="text/plain" id="src-builder" data-run="1">
 /* ===== Landtraining bouwer: training samenstellen, bewaren, exporteren ===== */
 (function(){
-const {CAT,byId,h,$,Anim,presc,itemDur,fmtMin,Player,exportHTML,fileName,readSession,shareLink,isWeb}=APP;
+const {CAT,byId,h,$,Anim,presc,totalDur,fmtMin,fmtDur,Player,exportHTML,fileName,readSession,shareLink,isWeb}=APP;
 const L=CAT.lists;
 const store={
   get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
@@ -14490,6 +14664,7 @@ const today=()=>new Date().toISOString().slice(0,10);
 const uid=()=>Math.random().toString(36).slice(2,9);
 const newSession=()=>({id:uid(),name:'',date:today(),trainer:store.get('lt-trainer',''),note:'',items:[]});
 const DEF={iso:{sets:3,hold:30,rest:30},dyn:{sets:3,reps:15,rest:45},tijd:{sets:3,work:60,rest:30},ritme:{rounds:4}};
+const byName=(a,b)=>a.naam.localeCompare(b.naam,'nl',{sensitivity:'base'});
 
 function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=h('div',{class:'toast',role:'status'},msg);document.body.append(t);setTimeout(()=>t.remove(),2600);}
 function sheet(title,build,{onClose}={}){
@@ -14507,7 +14682,7 @@ function stepper(label,val,min,max,step,onchange,unit=''){
   const inp=h('input',{type:'number',inputmode:'numeric',min,max,step,value:val,'aria-label':label});
   const setv=v=>{v=Math.max(min,Math.min(max,Math.round(v/step)*step||min));inp.value=v;onchange(v);};
   inp.addEventListener('change',()=>setv(+inp.value));
-  return h('label',{class:'stepper'},h('span',{},label+(unit?` (${unit})`:'')),
+  return h('div',{class:'stepper'},h('span',{},label+(unit?` (${unit})`:'')),
     h('div',{},h('button',{type:'button','aria-label':label+' minder',onclick:()=>setv(+inp.value-step)},'−'),inp,
       h('button',{type:'button','aria-label':label+' meer',onclick:()=>setv(+inp.value+step)},'+')));
 }
@@ -14526,12 +14701,17 @@ APP.Builder=function(root,startOpts={}){
     const same=hist().find(x=>x.name===o.name&&x.date===o.date&&JSON.stringify(x.items.map(i=>[i.ex,i.mode,i.sets]))===JSON.stringify(o.items.map(i=>[i.ex,i.mode,i.sets])));
     S=same?JSON.parse(JSON.stringify(same)):{...newSession(),...o,id:uid()};resume=null;save();}
 
+  /* volgorde wijzigen: oefening van plaats from naar plaats to */
+  function moveItem(from,to){
+    to=Math.max(0,Math.min(S.items.length-1,to));if(from===to)return;
+    const [x]=S.items.splice(from,1);S.items.splice(to,0,x);save();render();
+  }
   function render(){
     root.innerHTML='';
     const top=h('div',{class:'top'},h('div',{class:'brand'},h('h1',{},'Landtraining'),h('span',{class:'ver',title:'App-versie'},'versie '+CAT.version)),
       h('button',{type:'button',onclick:history},'Trainingen'),
       h('button',{type:'button','aria-label':'Menu',onclick:menu},'☰'));
-    const tot=S.items.reduce((a,it)=>a+itemDur(it),0);
+    const tot=totalDur(S.items);
     const meta=h('div',{class:'card stack'},
       h('label',{class:'f'},'Naam van de training',h('input',{value:S.name,placeholder:'Bijv. Dinsdag – romp en schouders',oninput:e=>{S.name=e.target.value;save();}})),
       h('div',{class:'two'},
@@ -14542,16 +14722,18 @@ APP.Builder=function(root,startOpts={}){
     if(!S.items.length)list.append(h('div',{class:'empty'},'Nog geen oefeningen. Voeg je eerste oefening toe.'));
     S.items.forEach((it,i)=>{
       const ex=byId[it.ex];
-      const mv=(d)=>{const j=i+d;if(j<0||j>=S.items.length)return;[S.items[i],S.items[j]]=[S.items[j],S.items[i]];save();render();};
-      list.append(h('div',{class:'card item'},
-        h('div',{class:'nr'},i+1),
+      const nr=h('button',{type:'button',class:'nr','aria-label':`Positie ${i+1}: verplaatsen (tik voor een positie, of sleep)`},String(i+1));
+      const card=h('div',{class:'card item','data-i':i},
+        nr,
         h('div',{onclick:()=>configure(it.ex,it,i),style:'cursor:pointer;min-width:0'},
           h('div',{class:'t'},ex?ex.naam:it.ex),
           h('div',{class:'d'},[...(it.labels||[]),presc(it)].join(' · '))),
         h('div',{class:'acts'},
-          h('button',{type:'button','aria-label':'Omhoog',disabled:i===0,onclick:()=>mv(-1)},'↑'),
-          h('button',{type:'button','aria-label':'Omlaag',disabled:i===S.items.length-1,onclick:()=>mv(1)},'↓'),
-          h('button',{type:'button','aria-label':'Verwijderen',onclick:()=>{S.items.splice(i,1);save();render();}},'✕'))));
+          h('button',{type:'button','aria-label':'Omhoog',disabled:i===0,onclick:()=>moveItem(i,i-1)},'↑'),
+          h('button',{type:'button','aria-label':'Omlaag',disabled:i===S.items.length-1,onclick:()=>moveItem(i,i+1)},'↓'),
+          h('button',{type:'button','aria-label':'Verwijderen',onclick:()=>{S.items.splice(i,1);save();render();}},'✕')));
+      dragHandle(nr,card,list,i);
+      list.append(card);
     });
     const banner=resume&&!S.items.length&&resume.id!==S.id?h('div',{class:'card resume'},
       h('div',{class:'grow',style:'min-width:0'},h('div',{class:'muted small'},'Laatst bewerkt'),h('b',{},resume.name||'Zonder naam')),
@@ -14559,6 +14741,7 @@ APP.Builder=function(root,startOpts={}){
       h('button',{type:'button',class:'ghost','aria-label':'Melding sluiten',onclick:()=>{resume=null;render();}},'✕')):null;
     const body=h('div',{class:'wrap stack'},...[banner,meta].filter(Boolean),
       h('div',{class:'row'},h('h2',{class:'grow'},'Oefeningen'),h('span',{class:'muted small'},S.items.length?`${S.items.length} · ca. ${fmtMin(tot)}`:'')),
+      S.items.length>1?h('div',{class:'muted small'},'Tik op het nummer om een oefening naar een andere plek te zetten, of sleep het nummer.'):null,
       list,
       h('button',{type:'button',class:'primary',onclick:picker},'+ Oefening toevoegen'));
     const bottom=h('div',{class:'bottom'},
@@ -14567,40 +14750,75 @@ APP.Builder=function(root,startOpts={}){
     root.append(top,body,bottom);
   }
 
-  /* ---------- oefening kiezen met filters uit de Oefenbibliotheek ---------- */
-  const F=store.get('lt-filter',{type:'',hoofd:'',spier:'',groep:''});
+  /* nummer van een oefening: tikken = positie kiezen, slepen = verplaatsen */
+  function dragHandle(nr,card,list,i){
+    /* luisteren op window: bij het verplaatsen van de kaart in de lijst gaat pointer-capture verloren */
+    let sy=0,drag=false,pid=null,raf=0,lastY=0;
+    const move=e=>{
+      if(pid!==e.pointerId)return;lastY=e.clientY;
+      if(!drag&&Math.abs(e.clientY-sy)>8){drag=true;card.classList.add('dragging');list.classList.add('sorting');scrollLoop();}
+      if(drag){e.preventDefault();place(e.clientY);}
+    };
+    const up=e=>{
+      if(pid!==e.pointerId)return;pid=null;cancelAnimationFrame(raf);
+      removeEventListener('pointermove',move);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);
+      if(drag){drag=false;card.classList.remove('dragging');list.classList.remove('sorting');
+        const order=[...list.querySelectorAll('.item')].map(c=>+c.dataset.i);
+        if(order.some((v,k)=>v!==k)){S.items=order.map(k=>S.items[k]);save();}
+        render();}
+      else if(e.type==='pointerup')moveSheet(i);
+    };
+    nr.addEventListener('pointerdown',e=>{if(S.items.length<2)return;e.preventDefault();sy=lastY=e.clientY;drag=false;pid=e.pointerId;
+      addEventListener('pointermove',move,{passive:false});addEventListener('pointerup',up);addEventListener('pointercancel',up);});
+    nr.addEventListener('click',e=>e.preventDefault());
+    nr.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();moveSheet(i);}});
+    function place(y){
+      const cards=[...list.querySelectorAll('.item')].filter(c=>c!==card);
+      let before=null;for(const c of cards){const r=c.getBoundingClientRect();if(y<r.top+r.height/2){before=c;break;}}
+      if(before){if(card.nextSibling!==before)list.insertBefore(card,before);}else if(list.lastElementChild!==card)list.append(card);
+      [...list.querySelectorAll('.item')].forEach((c,k)=>{c.querySelector('.nr').textContent=String(k+1);});
+    }
+    function scrollLoop(){raf=requestAnimationFrame(()=>{if(!drag)return;
+      const m=90;if(lastY<m)scrollBy(0,-Math.ceil((m-lastY)/6));else if(lastY>innerHeight-m-70)scrollBy(0,Math.ceil((lastY-innerHeight+m+70)/6));
+      place(lastY);scrollLoop();});}
+  }
+  function moveSheet(i){
+    const it=S.items[i],n=S.items.length;if(n<2)return;
+    sheet('Verplaatsen',(body,close)=>{
+      const go=to=>{close();moveItem(i,to);toast(`${byId[it.ex].naam} staat nu op plek ${Math.max(1,Math.min(n,to+1))}`);};
+      body.append(
+        h('div',{},h('b',{},byId[it.ex].naam),h('div',{class:'muted small'},`Nu op plek ${i+1} van ${n}. Kies de nieuwe plek.`)),
+        h('div',{class:'two'},
+          h('button',{type:'button',disabled:i===0,onclick:()=>go(0)},'⤒ Bovenaan'),
+          h('button',{type:'button',disabled:i===n-1,onclick:()=>go(n-1)},'⤓ Onderaan')),
+        h('div',{class:'posgrid'},S.items.map((x,k)=>h('button',{type:'button','aria-pressed':String(k===i),disabled:k===i,onclick:()=>go(k),title:byId[x.ex].naam},String(k+1)))));
+    });
+  }
+
+  /* ---------- oefening kiezen: type en spiergroep, op alfabet ---------- */
+  const F0=store.get('lt-filter',{}),F={type:F0.type||'',spier:F0.spier||''};
   function picker(){
     sheet('Oefening kiezen',(body,close)=>{
       const out=h('div',{class:'pick'});
-      const chipRow=(key,vals,label)=>{
-        const row=h('div',{class:'chips',role:'group','aria-label':label});
-        const mk=(v,lab)=>{const n=CAT.exercises.filter(e=>match(e,{...F,[key]:v})).length;
-          return h('button',{type:'button','aria-pressed':String(F[key]===v),onclick:()=>{F[key]=v;store.set('lt-filter',F);draw();}},lab+(v?` ${n}`:''));};
-        row.append(mk('','Alle'),...vals.map(v=>mk(v,v)));
-        return row;
-      };
-      const sel=(key,vals,label)=>{const s=h('select',{'aria-label':label,onchange:e=>{F[key]=e.target.value;store.set('lt-filter',F);draw();}},
-        h('option',{value:''},label+': alle'),...vals.map(v=>h('option',{value:v,selected:F[key]===v},v)));return s;};
-      const filters=h('div',{class:'stack'});
+      const sel=(key,vals,label)=>h('label',{class:'f'},label,h('select',{'aria-label':label,onchange:e=>{F[key]=e.target.value;store.set('lt-filter',F);draw();}},
+        h('option',{value:''},'Alle'),...vals.map(v=>h('option',{value:v,selected:F[key]===v},v+' ('+CAT.exercises.filter(e=>match(e,{...F,[key]:v})).length+')'))));
+      const filters=h('div',{class:'two'});
       body.append(filters,out);
       function draw(){
         filters.innerHTML='';
-        filters.append(
-          h('div',{class:'muted small'},'Type'),chipRow('type',L.types,'Type'),
-          h('div',{class:'muted small'},'Hoofdgroep'),chipRow('hoofd',L.hoofdgroepen,'Hoofdgroep'),
-          h('div',{class:'two'},h('div',{},sel('spier',L.spiergroepen,'Spiergroep')),h('div',{},sel('groep',L.groepen,'Categorie'))));
+        filters.append(sel('type',L.types,'Type'),sel('spier',L.spiergroepen,'Spiergroep'));
         out.innerHTML='';
-        const res=CAT.exercises.filter(e=>match(e,F));
+        const res=CAT.exercises.filter(e=>match(e,F)).sort(byName);
         if(!res.length)out.append(h('div',{class:'empty'},'Geen oefeningen met deze filters.'));
         res.forEach(e=>out.append(h('button',{type:'button',onclick:()=>{close();configure(e.id);}},
           h('b',{},e.naam),
           h('span',{class:'muted small'},e.sub||e.spiergroepen.join(', ')),
-          h('span',{},h('span',{class:'tag'},e.type),h('span',{class:'tag'},e.hoofdgroep),e.groep!==e.type?h('span',{class:'tag'},e.groep):null))));
+          h('span',{},h('span',{class:'tag'},e.type),...e.spiergroepen.slice(0,3).map(s=>h('span',{class:'tag'},s))))));
       }
       draw();
     });
   }
-  function match(e,f){return(!f.type||e.type===f.type)&&(!f.hoofd||e.hoofdgroep===f.hoofd)&&(!f.spier||e.spiergroepen.includes(f.spier))&&(!f.groep||e.groep===f.groep);}
+  function match(e,f){return(!f.type||e.type===f.type)&&(!f.spier||e.spiergroepen.includes(f.spier));}
 
   /* ---------- keuzes en aantallen voor één oefening ---------- */
   function configure(exId,existing,index){
@@ -14609,7 +14827,7 @@ APP.Builder=function(root,startOpts={}){
     const defFor=m=>m==='iso'?DEF.iso:ex.tijd?DEF.tijd:DEF.dyn;
     sheet(ex.naam,(body,close)=>{
       const stage=h('div',{class:'stage loading'}),legend=h('div',{class:'legend'});
-      const desc=h('div',{class:'muted small'}),nums=h('div',{class:'steppers'}),segs=h('div',{class:'stack'});
+      const desc=h('div',{class:'muted small'}),nums=h('div',{class:'steppers'}),tempo=h('div',{class:'muted small'}),segs=h('div',{class:'stack'});
       const saveBtn=h('button',{type:'button',class:'primary',disabled:true,onclick:()=>{
         it.opts=anim.pairs();it.mode=anim.mode();it.labels=anim.labels();
         if(ex.ritme)it.period=anim.period();
@@ -14641,31 +14859,36 @@ APP.Builder=function(root,startOpts={}){
         if(it.mode==='dyn'&&ex.dyn)parts.push('Dynamisch: '+ex.dyn);
         parts.push(ex.houding);desc.textContent=parts.join(' · ');
       }
+      function syncTempo(){
+        if(ex.ritme||ex.tijd||it.mode!=='dyn'){tempo.textContent='';return;}
+        const c=anim.cyc();
+        tempo.textContent=`Tempo van de animatie: 1 herhaling per ${String(Math.round(c*10)/10).replace('.',',')} s · een set duurt ca. ${fmtDur(it.reps*c)}`;
+      }
       function drawNums(){
         nums.innerHTML='';
-        const set=k=>v=>{it[k]=v;};
+        const set=k=>v=>{it[k]=v;syncTempo();};
         if(ex.ritme){nums.append(stepper('Rondes',it.rounds,1,30,1,set('rounds')));
-          nums.append(h('div',{class:'muted small'},`Eén ronde duurt ${anim.period()} s · totaal ca. ${APP.fmtDur(it.rounds*anim.period())}`));return;}
+          nums.append(h('div',{class:'muted small'},`Eén ronde duurt ${anim.period()} s · totaal ca. ${fmtDur(it.rounds*anim.period())}`));return;}
         nums.append(stepper('Sets',it.sets,1,10,1,set('sets')));
         if(it.mode==='iso')nums.append(stepper('Vasthouden',it.hold,5,180,5,set('hold'),'sec'));
         else if(ex.tijd)nums.append(stepper('Duur',it.work,10,300,5,set('work'),'sec'));
         else nums.append(stepper('Herhalingen',it.reps,1,60,1,set('reps')));
         nums.append(stepper('Rust',it.rest,0,180,5,set('rest'),'sec'));
       }
-      function refresh(){syncMode();drawSegs();syncDesc();drawNums();legend.innerHTML=anim.legend();}
+      function refresh(){syncMode();drawSegs();syncDesc();drawNums();syncTempo();legend.innerHTML=anim.legend();}
       anim=Anim(stage,exId,it.opts,()=>{stage.classList.remove('loading');saveBtn.disabled=false;refresh();});
       const note=h('input',{value:it.note||'',placeholder:'Bijv. per kant, rustig tempo',oninput:e=>it.note=e.target.value});
       body.append(...[
         h('div',{class:'muted small'},ex.sub),
-        stage,legend,segs,desc,nums,
+        stage,legend,segs,desc,nums,tempo,
         h('label',{class:'f'},'Aanwijzing (optioneel)',note),
-        h('div',{class:'row end'},existing?h('button',{type:'button',onclick:close},'Annuleren'):null,saveBtn)].filter(Boolean));
+        h('div',{class:'actions'+(existing?' two':'')},existing?h('button',{type:'button',onclick:close},'Annuleren'):null,saveBtn)].filter(Boolean));
     },{onClose:()=>anim&&anim.destroy()});
   }
 
   /* ---------- bekijken, exporteren, bewaren en openen ---------- */
   function preview(){
-    const p=Player(root,S,{onClose:()=>render()});
+    Player(root,S,{onClose:()=>render()});
   }
   /* ---------- delen: WhatsApp (bestand of tekst) of downloaden ---------- */
   function summary(s){
@@ -14752,7 +14975,7 @@ APP.Builder=function(root,startOpts={}){
         res.forEach(s=>{
           const m=(s.date||'').slice(0,7);
           if(m!==month){month=m;const [y,mm]=m.split('-');list.append(h('div',{class:'muted small',style:'margin-top:6px;text-transform:capitalize'},m?new Date(+y,+mm-1,1).toLocaleDateString('nl-NL',{month:'long',year:'numeric'}):'Zonder datum'));}
-          const tot=s.items.reduce((a,it)=>a+itemDur(it),0);
+          const tot=totalDur(s.items.filter(i=>byId[i.ex]));
           const open=()=>{S=JSON.parse(JSON.stringify(s));save();close();render();};
           list.append(h('div',{class:'card hist'+(s.id===S.id?' current':'')},
             h('div',{onclick:open,style:'cursor:pointer'},
@@ -14799,7 +15022,7 @@ APP.Builder=function(root,startOpts={}){
           h('button',{type:'button',onclick:()=>{close();S=newSession();save();render();}},'Nieuwe training'),
           h('button',{type:'button',onclick:()=>{close();openFile();}},'Training of back-up openen …'),
           h('button',{type:'button',disabled:!S.items.length,onclick:()=>{S={...JSON.parse(JSON.stringify(S)),id:uid(),name:(S.name||'Training')+' (kopie)',date:today()};delete S.shared;save();close();render();toast('Kopie gemaakt');}},'Kopie maken van deze training')),
-        h('div',{class:'muted small'},`Landtraining app v${CAT.version} · ${CAT.exercises.length} oefeningen. Alles werkt offline; alleen de WhatsApp-knoppen openen WhatsApp. Trainingen worden automatisch bewaard onder Mijn trainingen.`));
+        h('div',{class:'muted small'},`Landtraining app v${CAT.version} · ${CAT.exercises.length} oefeningen. Alles werkt offline; alleen de WhatsApp-knoppen openen WhatsApp. Trainingen worden automatisch bewaard onder Mijn trainingen. De tijdsinschatting rekent ca. 45 s per wissel tussen oefeningen.`));
     });
   }
   render();
